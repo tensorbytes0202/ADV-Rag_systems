@@ -51,10 +51,18 @@ def create_collection():
 # Store Embeddings
 # =========================
 
-def store_embeddings(
-    chunks,
-    embeddings
-):
+def store_embeddings(chunks, embeddings):
+
+    print("Chunks:", len(chunks))
+    print("Embeddings:", len(embeddings))
+
+    if not chunks:
+        print("No chunks found")
+        return
+
+    if not embeddings:
+        print("No embeddings found")
+        return
 
     points = []
 
@@ -72,13 +80,14 @@ def store_embeddings(
             )
         )
 
+    print("Points Created:", len(points))
+
     client.upsert(
         collection_name=COLLECTION_NAME,
         points=points
     )
 
     print(f"{len(points)} vectors stored successfully.")
-
 
 # =========================
 # Search Vectors
@@ -89,10 +98,10 @@ def search_similar_chunks(
     limit=5
 ):
 
-    results = client.search(
+    search_result = client.query_points(
         collection_name=COLLECTION_NAME,
-        query_vector=query_embedding,
+        query=query_embedding,
         limit=limit
     )
 
-    return results
+    return search_result.points
