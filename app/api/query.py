@@ -21,6 +21,14 @@ from app.services.generation_service import (
     generate_answer
 )
 
+from app.services.bm_25_service import (
+    bm25_search
+)
+
+from app.services.chunk_store import (
+    get_chunks
+)
+
 router = APIRouter()
 
 
@@ -38,22 +46,35 @@ def query_document(
         request.question
     )
 
-    # Retrieve Chunks from Qdrant
+    # Dense Retrieval
     results = search_similar_chunks(
         query_embedding,
         limit=10
     )
 
-    retrieved_chunks = []
+    # BM25 Retrieval
+    all_chunks = get_chunks()
+
+    bm25_results = bm25_search(
+        request.question,
+        all_chunks,
+        top_k=5
+    )
+
+    # Dense Chunks
+    dense_chunks = []
+
     sources = []
 
     for result in results:
 
-        retrieved_chunks.append(
-            result.payload.get(
-                "text",
-                ""
-            )
+        chunk_text = result.payload.get(
+            "text",
+            ""
+        )
+
+        dense_chunks.append(
+            chunk_text
         )
 
         sources.append({
@@ -70,13 +91,30 @@ def query_document(
             )
         })
 
-    # Rerank Chunks
-    ranked_chunks = rerank_chunks(
-        request.question,
-        retrieved_chunks
+    # BM25 Chunks
+    bm25_chunks = []
+
+    for chunk, score in bm25_results:
+
+        bm25_chunks.append(
+            chunk
+        )
+
+    # Hybrid Merge
+    hybrid_chunks = list(
+        set(
+            dense_chunks +
+            bm25_chunks
+        )
     )
 
-    # Top Chunks Response
+    # Reranking
+    ranked_chunks = rerank_chunks(
+        request.question,
+        hybrid_chunks
+    )
+
+    # Top Results
     response = []
 
     for chunk, score in ranked_chunks[:5]:
@@ -86,7 +124,7 @@ def query_document(
             "text": chunk
         })
 
-    # Confidence Score
+    # Confidence
     scores = [
         float(score)
         for _, score in ranked_chunks[:5]
@@ -113,7 +151,7 @@ def query_document(
         context += chunk
         context += "\n\n"
 
-    # Generate Final Answer
+    # Generate Answer
     answer = generate_answer(
         request.question,
         context
@@ -123,5 +161,19 @@ def query_document(
         "question": request.question,
         "answer": answer,
         "confidence": confidence,
+
+        # Debug Metrics
+        "retrieved_dense": len(
+            dense_chunks
+        ),
+
+        "retrieved_bm25": len(
+            bm25_chunks
+        ),
+
+        "retrieved_hybrid": len(
+            hybrid_chunks
+        ),
+
         "sources": sources
     }
