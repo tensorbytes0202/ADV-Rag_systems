@@ -9,7 +9,7 @@ from app.services.vector_store import (
     create_collection,
     store_embeddings
 )
-
+from app.services.chunk_store import(save_chunks)
 router = APIRouter()
 
 
@@ -28,6 +28,7 @@ async def upload_pdf(file: UploadFile = File(...)):
     chunks = create_chunks(full_text)
 
     print("Total Chunks:", len(chunks))
+    save_chunks(chunks)
 
     embeddings = generate_embeddings(chunks)
 
@@ -37,7 +38,8 @@ async def upload_pdf(file: UploadFile = File(...)):
 
     store_embeddings(
         chunks,
-        embeddings
+        embeddings,
+        file.filename
     )
 
     return {

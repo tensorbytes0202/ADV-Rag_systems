@@ -1,13 +1,11 @@
+import uuid
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     VectorParams,
     Distance,
     PointStruct
 )
-
-# =========================
-# Qdrant Client
-# =========================
 
 client = QdrantClient(
     host="localhost",
@@ -16,10 +14,6 @@ client = QdrantClient(
 
 COLLECTION_NAME = "rag_documents"
 
-
-# =========================
-# Create Collection
-# =========================
 
 def create_collection():
 
@@ -40,21 +34,22 @@ def create_collection():
             )
         )
 
-        print(f"Collection '{COLLECTION_NAME}' created.")
+        print(
+            f"Collection '{COLLECTION_NAME}' created."
+        )
 
     else:
 
-        print(f"Collection '{COLLECTION_NAME}' already exists.")
+        print(
+            f"Collection '{COLLECTION_NAME}' already exists."
+        )
 
 
-# =========================
-# Store Embeddings
-# =========================
-
-def store_embeddings(chunks, embeddings):
-
-    print("Chunks:", len(chunks))
-    print("Embeddings:", len(embeddings))
+def store_embeddings(
+    chunks,
+    embeddings,
+    document_name
+):
 
     if not chunks:
         print("No chunks found")
@@ -72,30 +67,31 @@ def store_embeddings(chunks, embeddings):
 
         points.append(
             PointStruct(
-                id=idx,
+                id=idx + 100000,
                 vector=embedding,
                 payload={
-                    "text": chunk
+                    "chunk_id": str(
+                        uuid.uuid4()
+                    ),
+                    "text": chunk,
+                    "document_name": document_name
                 }
             )
         )
-
-    print("Points Created:", len(points))
 
     client.upsert(
         collection_name=COLLECTION_NAME,
         points=points
     )
 
-    print(f"{len(points)} vectors stored successfully.")
+    print(
+        f"{len(points)} vectors stored successfully."
+    )
 
-# =========================
-# Search Vectors
-# =========================
 
 def search_similar_chunks(
     query_embedding,
-    limit=5
+    limit=10
 ):
 
     search_result = client.query_points(
