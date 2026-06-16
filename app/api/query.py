@@ -29,6 +29,14 @@ from app.services.chunk_store import (
     get_chunks
 )
 
+from app.services.chat_memory import (
+    add_message
+)
+
+from app.services.query_rewrite import (
+    rewrite_question
+)
+
 router = APIRouter()
 
 
@@ -41,27 +49,52 @@ def query_document(
     request: QueryRequest
 ):
 
-    # Generate Query Embedding
-    query_embedding = generate_query_embedding(
+    # ===================================
+    # Rewrite Follow-up Question
+    # ===================================
+
+    rewritten_question = rewrite_question(
         request.question
     )
 
+    print("=" * 50)
+    print("Original:", request.question)
+    print("Rewritten:", rewritten_question)
+    print("=" * 50)
+
+    # ===================================
+    # Generate Query Embedding
+    # ===================================
+
+    query_embedding = generate_query_embedding(
+        rewritten_question
+    )
+
+    # ===================================
     # Dense Retrieval
+    # ===================================
+
     results = search_similar_chunks(
         query_embedding,
         limit=10
     )
 
+    # ===================================
     # BM25 Retrieval
+    # ===================================
+
     all_chunks = get_chunks()
 
     bm25_results = bm25_search(
-        request.question,
+        rewritten_question,
         all_chunks,
         top_k=5
     )
 
+    # ===================================
     # Dense Chunks
+    # ===================================
+
     dense_chunks = []
 
     sources = []
@@ -91,7 +124,10 @@ def query_document(
             )
         })
 
+    # ===================================
     # BM25 Chunks
+    # ===================================
+
     bm25_chunks = []
 
     for chunk, score in bm25_results:
@@ -100,7 +136,10 @@ def query_document(
             chunk
         )
 
-    # Hybrid Merge
+    # ===================================
+    # Hybrid Search Merge
+    # ===================================
+
     hybrid_chunks = list(
         set(
             dense_chunks +
@@ -108,23 +147,19 @@ def query_document(
         )
     )
 
+    # ===================================
     # Reranking
+    # ===================================
+
     ranked_chunks = rerank_chunks(
-        request.question,
+        rewritten_question,
         hybrid_chunks
     )
 
-    # Top Results
-    response = []
+    # ===================================
+    # Confidence Calculation
+    # ===================================
 
-    for chunk, score in ranked_chunks[:5]:
-
-        response.append({
-            "rerank_score": float(score),
-            "text": chunk
-        })
-
-    # Confidence
     scores = [
         float(score)
         for _, score in ranked_chunks[:5]
@@ -134,16 +169,23 @@ def query_document(
         scores
     )
 
+    # ===================================
     # Hallucination Guard
-    if confidence < 0.50:
+    # ===================================
+
+    if confidence < 0.05:
 
         return {
             "question": request.question,
+            "rewritten_question": rewritten_question,
             "confidence": confidence,
             "answer": "Insufficient evidence found."
         }
 
+    # ===================================
     # Build Context
+    # ===================================
+
     context = ""
 
     for chunk, score in ranked_chunks[:5]:
@@ -151,18 +193,60 @@ def query_document(
         context += chunk
         context += "\n\n"
 
-    # Generate Answer
+    # ===================================
+    # Context Chunks For UI
+    # ===================================
+
+    context_chunks = []
+
+    for chunk, score in ranked_chunks[:5]:
+
+        context_chunks.append({
+            "text": chunk,
+            "rerank_score": float(score)
+        })
+
+    # ===================================
+    # Save User Message
+    # ===================================
+
+    add_message(
+        "user",
+        request.question
+    )
+
+    # ===================================
+    # Generate Final Answer
+    # ===================================
+
     answer = generate_answer(
-        request.question,
+        rewritten_question,
         context
     )
 
+    # ===================================
+    # Save Assistant Message
+    # ===================================
+
+    add_message(
+        "assistant",
+        answer
+    )
+
+    # ===================================
+    # Response
+    # ===================================
+
     return {
+
         "question": request.question,
+
+        "rewritten_question": rewritten_question,
+
         "answer": answer,
+
         "confidence": confidence,
 
-        # Debug Metrics
         "retrieved_dense": len(
             dense_chunks
         ),
@@ -175,5 +259,7 @@ def query_document(
             hybrid_chunks
         ),
 
-        "sources": sources
+        "sources": sources,
+
+        "context_chunks": context_chunks
     }

@@ -1,9 +1,11 @@
 import Navbar from "./components/Navbar";
 import UploadSection from "./components/UploadSection";
+import QuerySection from "./components/QuerySection";
 
 function App() {
 
   return (
+
     <div className="min-h-screen bg-gray-100">
 
       <Navbar />
@@ -12,9 +14,12 @@ function App() {
 
         <UploadSection />
 
+        <QuerySection />
+
       </div>
 
     </div>
+
   );
 }
 
