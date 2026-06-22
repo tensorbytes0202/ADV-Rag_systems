@@ -61,28 +61,69 @@ def store_embeddings(
 
     points = []
 
-    for idx, (chunk, embedding) in enumerate(
-        zip(chunks, embeddings)
-    ):
+    for chunk_data, embedding in zip(
+    chunks,
+    embeddings
+):
 
         points.append(
             PointStruct(
-                id=idx + 100000,
-                vector=embedding,
-                payload={
-                    "chunk_id": str(
-                        uuid.uuid4()
-                    ),
-                    "text": chunk,
-                    "document_name": document_name
-                }
-            )
+            id=str(uuid.uuid4()),
+            vector=embedding,
+            payload={
+                "chunk_id": str(
+                    uuid.uuid4()
+                ),
+
+                "text": chunk_data[
+                    "text"
+                ],
+
+                "document_name": chunk_data[
+                    "document"
+                ],
+
+                "page": chunk_data[
+                    "page"
+                ]
+            }
+        )
+    )
+
+    batch_size = 100
+
+    total_batches = (
+        len(points) + batch_size - 1
+    ) // batch_size
+
+    print(
+        f"Total Points: {len(points)}"
+    )
+
+    print(
+        f"Total Batches: {total_batches}"
+    )
+
+    for i in range(
+        0,
+        len(points),
+        batch_size
+    ):
+
+        batch = points[
+            i:i + batch_size
+        ]
+
+        client.upsert(
+            collection_name=COLLECTION_NAME,
+            points=batch
         )
 
-    client.upsert(
-        collection_name=COLLECTION_NAME,
-        points=points
-    )
+        print(
+            f"Stored Batch "
+            f"{(i // batch_size) + 1}"
+            f"/{total_batches}"
+        )
 
     print(
         f"{len(points)} vectors stored successfully."
@@ -91,7 +132,7 @@ def store_embeddings(
 
 def search_similar_chunks(
     query_embedding,
-    limit=10
+    limit=10,
 ):
 
     search_result = client.query_points(

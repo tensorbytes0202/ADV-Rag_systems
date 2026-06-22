@@ -9,30 +9,68 @@ from app.services.vector_store import (
     create_collection,
     store_embeddings
 )
-from app.services.chunk_store import(save_chunks)
+
+from app.services.chunk_store import (
+    save_chunks
+)
+
 router = APIRouter()
 
 
 @router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(
+    file: UploadFile = File(...)
+):
 
     file_path = save_pdf(file)
 
-    pdf_data = extract_pdf_data(file_path)
+    pdf_data = extract_pdf_data(
+        file_path
+    )
 
-    full_text = ""
+    chunks = []
+
+    print(
+        "Total Pages:",
+        len(pdf_data["pages"])
+    )
 
     for page in pdf_data["pages"]:
-        full_text += page["text"] + "\n"
 
-    chunks = create_chunks(full_text)
+        page_text = page["text"]
 
-    print("Total Chunks:", len(chunks))
-    save_chunks(chunks)
+        page_chunks = create_chunks(
+            page_text
+        )
 
-    embeddings = generate_embeddings(chunks)
+        for chunk in page_chunks:
 
-    print("Total Embeddings:", len(embeddings))
+            chunks.append({
+                "text": chunk,
+                "page": page["page_number"],
+                "document": file.filename
+            })
+
+    print(
+        "Total Chunks:",
+        len(chunks)
+    )
+
+    save_chunks(
+        chunks
+    )
+
+    embeddings = generate_embeddings(
+        [
+            chunk["text"]
+            for chunk in chunks
+        ]
+    )
+
+    print(
+        "Total Embeddings:",
+        len(embeddings)
+    )
 
     create_collection()
 

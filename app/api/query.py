@@ -1,3 +1,8 @@
+from huggingface_hub.inference._generated.types import document_question_answering
+from huggingface_hub.inference._generated.types import document_question_answering
+from huggingface_hub.inference._generated.types import document_question_answering
+from typing import List
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -37,11 +42,21 @@ from app.services.query_rewrite import (
     rewrite_question
 )
 
+from app.services.verification_service import (
+    verify_answer
+)
+from app.services.multi_query_service import (
+    generate_queries
+)
+from app.services.rrf_service import(
+rrf_fusion
+)
 router = APIRouter()
 
 
 class QueryRequest(BaseModel):
     question: str
+    documents: List[str] = []
 
 
 @router.post("/query")
@@ -50,12 +65,10 @@ def query_document(
 ):
 
     # ===================================
-    # Rewrite Follow-up Question
+    # Rewrite Question
     # ===================================
 
-    rewritten_question = rewrite_question(
-        request.question
-    )
+    rewritten_question = request.question
 
     print("=" * 50)
     print("Original:", request.question)
@@ -63,21 +76,55 @@ def query_document(
     print("=" * 50)
 
     # ===================================
-    # Generate Query Embedding
+    # Multi Query Generation
     # ===================================
 
-    query_embedding = generate_query_embedding(
-        rewritten_question
+    queries = [
+    rewritten_question
+]
+
+    print("=" * 50)
+    print("Generated Queries:")
+    print(queries)
+    print("=" * 50)
+    # ===================================
+    # Embedding
+    # ===================================
+
+    all_results = []
+
+    for query in queries:
+
+        query_embedding = (
+        generate_query_embedding(
+            query
+        )
     )
-
-    # ===================================
-    # Dense Retrieval
-    # ===================================
 
     results = search_similar_chunks(
         query_embedding,
-        limit=10
+        limit=20
     )
+
+    all_results.extend(
+        results
+    )
+
+    unique_results = {}
+
+    for result in all_results:
+
+        chunk_id = result.payload.get(
+        "chunk_id"
+    )
+
+    unique_results[
+        chunk_id
+    ] = result
+
+    results = list(
+    unique_results.values()
+)
 
     # ===================================
     # BM25 Retrieval
@@ -88,7 +135,7 @@ def query_document(
     bm25_results = bm25_search(
         rewritten_question,
         all_chunks,
-        top_k=5
+        top_k=20
     )
 
     # ===================================
@@ -133,19 +180,28 @@ def query_document(
     for chunk, score in bm25_results:
 
         bm25_chunks.append(
-            chunk
-        )
-
-    # ===================================
-    # Hybrid Search Merge
-    # ===================================
-
-    hybrid_chunks = list(
-        set(
-            dense_chunks +
-            bm25_chunks
-        )
+        chunk["text"]
     )
+
+    # ===================================
+    # Hybrid Merge
+    # ===================================
+
+    hybrid_chunks = rrf_fusion(
+    dense_chunks,
+    bm25_chunks
+            )
+
+    # ===================================
+    # RRF Debug
+    # ===================================
+
+    print("=" * 50)
+    print(
+    "RRF Chunks:",
+    len(hybrid_chunks)
+    )
+    print("=" * 50)
 
     # ===================================
     # Reranking
@@ -156,8 +212,17 @@ def query_document(
         hybrid_chunks
     )
 
+    print("\nTOP CHUNKS\n")
+
+    for i, (chunk, score) in enumerate(
+    ranked_chunks[:5]
+):
+     print("=" * 50)
+     print("Score:", score)
+     print(chunk[:500])
+
     # ===================================
-    # Confidence Calculation
+    # Confidence
     # ===================================
 
     scores = [
@@ -170,20 +235,25 @@ def query_document(
     )
 
     # ===================================
-    # Hallucination Guard
+    # Retrieval Failure Check
     # ===================================
 
-    if confidence < 0.05:
+    # if confidence < 0.05:
 
-        return {
-            "question": request.question,
-            "rewritten_question": rewritten_question,
-            "confidence": confidence,
-            "answer": "Insufficient evidence found."
-        }
+    #     return {
+    #         "question": request.question,
+    #         "rewritten_question": rewritten_question,
+    #         "confidence": confidence,
+    #         "answer": "Insufficient evidence found."
+    #     }
+
+    print(
+    "Confidence:",
+    confidence
+)
 
     # ===================================
-    # Build Context
+    # Context Build
     # ===================================
 
     context = ""
@@ -194,7 +264,7 @@ def query_document(
         context += "\n\n"
 
     # ===================================
-    # Context Chunks For UI
+    # UI Chunks
     # ===================================
 
     context_chunks = []
@@ -216,13 +286,55 @@ def query_document(
     )
 
     # ===================================
-    # Generate Final Answer
+    # Generate Answer
     # ===================================
 
     answer = generate_answer(
         rewritten_question,
         context
     )
+
+    # ===================================
+    # Verification Layer
+    # ===================================
+
+    # verification = verify_answer(
+    #     rewritten_question,
+    #     answer,
+    #     context
+    # )
+
+    # if verification != "SUPPORTED":
+
+    #     answer = (
+    #         "Insufficient evidence found."
+    #     )
+    # ===================================
+# Debug Answer
+# ===================================
+
+    print("\n" + "=" * 50)
+    print("FINAL GENERATED ANSWER")
+    print("=" * 50)
+    print(answer)
+    print("=" * 50 + "\n")
+
+    verification = "DISABLED"
+
+    # ===================================
+    # Citations
+    # ===================================
+
+    citations = []
+
+    for idx, source in enumerate(
+        sources[:5]
+    ):
+
+        citations.append({
+            "source_id": idx + 1,
+            "document": source["document"]
+        })
 
     # ===================================
     # Save Assistant Message
@@ -245,6 +357,8 @@ def query_document(
 
         "answer": answer,
 
+        "verification": verification,
+
         "confidence": confidence,
 
         "retrieved_dense": len(
@@ -260,6 +374,8 @@ def query_document(
         ),
 
         "sources": sources,
+
+        "citations": citations,
 
         "context_chunks": context_chunks
     }

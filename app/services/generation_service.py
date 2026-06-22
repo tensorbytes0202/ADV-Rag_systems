@@ -4,18 +4,16 @@ from app.services.chat_memory import (
     get_history
 )
 
-
 def generate_answer(
     question: str,
     context: str
 ):
 
-    # Load Conversation History
     history = get_history()
 
     history_text = ""
 
-    for msg in history:
+    for msg in history[-6:]:
 
         history_text += (
             f"{msg['role']}: "
@@ -26,14 +24,13 @@ def generate_answer(
 You are an Advanced RAG Assistant.
 
 Rules:
-1. Answer ONLY from the provided context.
+1. Answer ONLY from provided context.
 2. Do not use outside knowledge.
-3. Use conversation history only for understanding follow-up questions.
-4. Do not make assumptions.
-5. If answer is not present, say:
-   "Insufficient information found."
+3. If answer is not found in context, reply:
+   Insufficient information found.
+4. Give concise answers.
 
-CONVERSATION HISTORY:
+CONVERSATION:
 {history_text}
 
 CONTEXT:
@@ -53,4 +50,12 @@ QUESTION:
         ]
     )
 
-    return response["message"]["content"]
+    answer = response["message"]["content"]
+
+    print("\n" + "=" * 50)
+    print("GENERATED ANSWER")
+    print("=" * 50)
+    print(answer)
+    print("=" * 50 + "\n")
+
+    return answer

@@ -5,12 +5,12 @@ def calculate_confidence(
     if not rerank_scores:
         return 0.0
 
-    avg_score = sum(
+    best_score = max(
         rerank_scores
-    ) / len(rerank_scores)
+    )
 
     confidence = min(
-        avg_score / 10,
+        best_score / 10,
         1.0
     )
 
