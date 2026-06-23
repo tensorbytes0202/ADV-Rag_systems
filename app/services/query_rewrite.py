@@ -21,10 +21,7 @@ def rewrite_question(
         )
 
     prompt = f"""
-Rewrite the question ONLY if it depends on previous conversation.
-
-If question is already complete,
-return it unchanged.
+Convert the follow-up question into a standalone question.
 
 Conversation:
 {history_text}
@@ -32,7 +29,7 @@ Conversation:
 Question:
 {question}
 
-Return only rewritten question.
+Only return the rewritten question.
 """
 
     response = ollama.chat(

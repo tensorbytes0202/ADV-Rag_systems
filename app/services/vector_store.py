@@ -8,7 +8,7 @@ from qdrant_client.models import (
 )
 
 client = QdrantClient(
-    host="localhost",
+    host="127.0.0.1",
     port=6333
 )
 
@@ -16,9 +16,10 @@ COLLECTION_NAME = "rag_documents"
 
 
 def create_collection():
+    print("Connecting Qdrant...")
 
     collections = client.get_collections()
-
+    print("Connected Successfully")
     existing_collections = [
         collection.name
         for collection in collections.collections
@@ -90,7 +91,7 @@ def store_embeddings(
         )
     )
 
-    batch_size = 100
+    batch_size = 10
 
     total_batches = (
         len(points) + batch_size - 1
@@ -105,28 +106,24 @@ def store_embeddings(
     )
 
     for i in range(
-        0,
-        len(points),
-        batch_size
-    ):
+    0,
+    len(points),
+    batch_size
+):
 
-        batch = points[
-            i:i + batch_size
-        ]
+        batch = points[i:i + batch_size]
+
+        print(
+        f"Uploading Batch {(i // batch_size) + 1}/{total_batches}"
+    )
 
         client.upsert(
             collection_name=COLLECTION_NAME,
             points=batch
-        )
+    )
 
         print(
-            f"Stored Batch "
-            f"{(i // batch_size) + 1}"
-            f"/{total_batches}"
-        )
-
-    print(
-        f"{len(points)} vectors stored successfully."
+        f"Uploaded Batch {(i // batch_size) + 1}/{total_batches}"
     )
 
 

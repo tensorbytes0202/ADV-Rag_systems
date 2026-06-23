@@ -4,7 +4,17 @@ import ollama
 def generate_queries(question):
 
     prompt = f"""
-Generate 4 different search queries for the question.
+You are helping an Operating System RAG system.
+
+Generate 4 alternative search queries.
+
+Rules:
+1. Keep same meaning.
+2. Stay in Operating System / Computer Science domain.
+3. Do not change domain.
+4. Return only queries.
+5. One query per line.
+
 
 Question:
 {question}

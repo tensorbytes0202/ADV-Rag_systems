@@ -1,6 +1,3 @@
-from huggingface_hub.inference._generated.types import document_question_answering
-from huggingface_hub.inference._generated.types import document_question_answering
-from huggingface_hub.inference._generated.types import document_question_answering
 from typing import List
 
 from fastapi import APIRouter
@@ -50,6 +47,9 @@ from app.services.multi_query_service import (
 )
 from app.services.rrf_service import(
 rrf_fusion
+)
+from app.services.query_classifier import (
+    classify_query
 )
 router = APIRouter()
 
@@ -152,6 +152,10 @@ def query_document(
             "text",
             ""
         )
+        for result in results[:3]:
+
+            print("\nPAYLOAD DEBUG")
+            print(result.payload)
 
         dense_chunks.append(
             chunk_text
@@ -161,6 +165,11 @@ def query_document(
             "document": result.payload.get(
                 "document_name",
                 "Unknown"
+            ),
+
+             "page": result.payload.get(
+                "page",
+                 "N/A"
             ),
             "chunk_id": result.payload.get(
                 "chunk_id",
@@ -269,13 +278,35 @@ def query_document(
 
     context_chunks = []
 
-    for chunk, score in ranked_chunks[:5]:
+    for idx, (chunk, score) in enumerate(
+        ranked_chunks[:5]
+):
+
+        page = "N/A"
+        document = "Unknown"
+
+        if idx < len(sources):
+
+            page = sources[idx].get(
+            "page",
+            "N/A"
+        )
+
+            document = sources[idx].get(
+            "document",
+            "Unknown"
+        )
 
         context_chunks.append({
-            "text": chunk,
-            "rerank_score": float(score)
-        })
 
+            "text": chunk,
+
+            "rerank_score": float(score),
+
+            "page": page,
+
+            "document": document
+    })
     # ===================================
     # Save User Message
     # ===================================
@@ -289,9 +320,14 @@ def query_document(
     # Generate Answer
     # ===================================
 
+    query_type = classify_query(
+    rewritten_question
+)
+
     answer = generate_answer(
         rewritten_question,
-        context
+        context,
+        query_type
     )
 
     # ===================================
@@ -333,8 +369,12 @@ def query_document(
 
         citations.append({
             "source_id": idx + 1,
-            "document": source["document"]
-        })
+        "document": source["document"],
+        "page": source.get(
+            "page",
+            "N/A"
+        )
+})
 
     # ===================================
     # Save Assistant Message

@@ -8,19 +8,21 @@ def verify_answer(
 ):
 
     prompt = f"""
-QUESTION:
+You are a fact-checking system.
+
+Question:
 {question}
 
-ANSWER:
+Answer:
 {answer}
 
-CONTEXT:
+Context:
 {context}
 
-Is every important claim in the answer
-supported by the context?
+Task:
+Check whether every important claim in the answer is supported by the context.
 
-Return ONLY:
+Return ONLY one word:
 
 SUPPORTED
 
@@ -39,8 +41,13 @@ UNSUPPORTED
         ]
     )
 
-    return (
+    result = (
         response["message"]["content"]
         .strip()
         .upper()
     )
+
+    if "SUPPORTED" in result and "UNSUPPORTED" not in result:
+        return "SUPPORTED"
+
+    return "UNSUPPORTED"
