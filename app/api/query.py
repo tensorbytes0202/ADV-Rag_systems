@@ -1,3 +1,13 @@
+
+from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from app.services.metadata_parser import extract_metadata
 from typing import List
 
 from fastapi import APIRouter
@@ -38,10 +48,16 @@ from app.services.chat_memory import (
 from app.services.query_rewrite import (
     rewrite_question
 )
-
-from app.services.verification_service import (
-    verify_answer
+from app.services.context_expansion import (
+    expand_context
 )
+from app.services.context_compression import (
+    compress_context
+)
+
+#from app.services.verification_service import (
+ #   verify_answer
+#)
 from app.services.multi_query_service import (
     generate_queries
 )
@@ -50,6 +66,13 @@ rrf_fusion
 )
 from app.services.query_classifier import (
     classify_query
+)
+from app.services.parent_child_service import (
+    get_parent_chunks
+)
+
+from app.services.adaptive_retrievel import (
+    get_retrieval_config
 )
 router = APIRouter()
 
@@ -68,7 +91,16 @@ def query_document(
     # Rewrite Question
     # ===================================
 
-    rewritten_question = request.question
+    rewritten_question = rewrite_question(
+    request.question
+)
+    metadata = extract_metadata(
+    rewritten_question
+        )
+    print("=" * 50)
+    print("METADATA")
+    print(metadata)
+    print("=" * 50)
 
     print("=" * 50)
     print("Original:", request.question)
@@ -79,14 +111,28 @@ def query_document(
     # Multi Query Generation
     # ===================================
 
-    queries = [
-    rewritten_question
-]
+    queries = generate_queries(rewritten_question)
 
-    print("=" * 50)
-    print("Generated Queries:")
-    print(queries)
-    print("=" * 50)
+    if not queries:
+        queries = [rewritten_question]
+
+    queries = list(dict.fromkeys(queries))
+    # ===================================
+    # Adaptive Retrieval Config
+    # ===================================
+
+    query_type = classify_query(
+        rewritten_question
+)
+
+    config = get_retrieval_config(
+        query_type
+)
+
+    print("=" * 60)
+    print("QUERY TYPE :", query_type)
+    print("RETRIEVAL CONFIG :", config)
+    print("=" * 60)
     # ===================================
     # Embedding
     # ===================================
@@ -95,20 +141,41 @@ def query_document(
 
     for query in queries:
 
-        query_embedding = (
-        generate_query_embedding(
+        query_embedding = (generate_query_embedding(
             query
         )
     )
+        print("=" * 50)
+        print("Searching With Metadata")
+        print("Document :", metadata["document_name"])
+        print("Page :", metadata["page"])
+        print("=" * 50)
 
-    results = search_similar_chunks(
-        query_embedding,
-        limit=20
+        if metadata["document_name"] or metadata["page"]:
+
+            results = search_similar_chunks(
+
+            query_embedding,
+
+            limit=config["dense_top_k"],
+
+            document_name=metadata["document_name"],
+
+            page=metadata["page"]
+
     )
 
-    all_results.extend(
-        results
+        else:
+
+            results = search_similar_chunks(
+
+            query_embedding,
+
+            limit=20
+
     )
+
+        all_results.extend(results)
 
     unique_results = {}
 
@@ -118,7 +185,7 @@ def query_document(
         "chunk_id"
     )
 
-    unique_results[
+        unique_results[
         chunk_id
     ] = result
 
@@ -131,55 +198,101 @@ def query_document(
     # ===================================
 
     all_chunks = get_chunks()
+    if metadata["document_name"]:
+
+        all_chunks = [
+
+        chunk
+
+        for chunk in all_chunks
+
+        if chunk["document"] == metadata["document_name"]
+
+    ]
+
+    if metadata["page"]:
+
+        all_chunks = [
+
+        chunk
+
+            for chunk in all_chunks
+
+            if chunk["page"] == metadata["page"]
+
+    ]
 
     bm25_results = bm25_search(
         rewritten_question,
         all_chunks,
-        top_k=20
+        top_k=config["bm25_top_k"]
     )
 
     # ===================================
-    # Dense Chunks
-    # ===================================
+# Parent Retrieval
+# ===================================
 
-    dense_chunks = []
+    dense_chunks = get_parent_chunks(results)
+    expanded_chunks = expand_context(
+    results,
+    window_size=config["window_size"]
+)
+    compressed_chunks = compress_context(
+
+    rewritten_question,
+
+    expanded_chunks,
+
+    top_k=config["compression_top_k"]
+
+)
+
+    print("=" * 60)
+    print("Compressed Chunks :", len(compressed_chunks))
+    print("=" * 60)
 
     sources = []
 
     for result in results:
 
-        chunk_text = result.payload.get(
-            "text",
-            ""
-        )
-        for result in results[:3]:
-
-            print("\nPAYLOAD DEBUG")
-            print(result.payload)
-
-        dense_chunks.append(
-            chunk_text
-        )
+        payload = result.payload
 
         sources.append({
-            "document": result.payload.get(
-                "document_name",
-                "Unknown"
-            ),
 
-             "page": result.payload.get(
-                "page",
-                 "N/A"
-            ),
-            "chunk_id": result.payload.get(
-                "chunk_id",
-                "N/A"
-            ),
-            "vector_score": float(
-                result.score
-            )
-        })
+        "document": payload.get(
+            "document_name",
+            "Unknown"
+        ),
 
+        "page": payload.get(
+            "page",
+            "N/A"
+        ),
+
+        "chunk_id": payload.get(
+            "chunk_id",
+            "N/A"
+        ),
+
+        "parent_id": payload.get(
+            "parent_id",
+            "N/A"
+        ),
+
+        "vector_score": float(
+            result.score
+        )
+
+    })
+
+    print("=" * 50)
+    print("Parent Chunks Retrieved :", len(dense_chunks))
+    print("=" * 50)
+
+    print("=" * 60)
+    print("Parent Chunks :", len(dense_chunks))
+    print("Expanded Chunks :", len(expanded_chunks))
+    print("=" * 60)
     # ===================================
     # BM25 Chunks
     # ===================================
@@ -197,7 +310,7 @@ def query_document(
     # ===================================
 
     hybrid_chunks = rrf_fusion(
-    dense_chunks,
+    compressed_chunks,
     bm25_chunks
             )
 
@@ -211,6 +324,16 @@ def query_document(
     len(hybrid_chunks)
     )
     print("=" * 50)
+    print("=" * 60)
+    print("HYBRID CHUNKS")
+    print(len(hybrid_chunks))
+
+    for i, chunk in enumerate(hybrid_chunks[:5]):
+        print(f"\nChunk {i}")
+        print(type(chunk))
+        print(chunk[:300] if chunk else chunk)
+
+    print("=" * 60)
 
     # ===================================
     # Reranking
@@ -239,9 +362,38 @@ def query_document(
         for _, score in ranked_chunks[:5]
     ]
 
-    confidence = calculate_confidence(
-        scores
-    )
+    confidence = calculate_confidence(scores) if scores else 0
+    # ===================================
+# Retrieval Failure
+# ===================================
+
+    if not ranked_chunks:
+
+        return {
+
+        "question": request.question,
+
+        "rewritten_question": rewritten_question,
+
+        "answer": "No relevant information found in the uploaded documents.",
+
+        "verification": "FAILED",
+
+        "confidence": 0,
+
+        "retrieved_dense": 0,
+
+        "retrieved_bm25": 0,
+
+        "retrieved_hybrid": 0,
+
+        "sources": [],
+
+        "citations": [],
+
+        "context_chunks": []
+
+    }
 
     # ===================================
     # Retrieval Failure Check
@@ -305,7 +457,13 @@ def query_document(
 
             "page": page,
 
-            "document": document
+            "document": document,
+
+            "vector_score": (
+                sources[idx]["vector_score"]
+                if idx < len(sources)
+                else 0
+                        )
     })
     # ===================================
     # Save User Message
@@ -319,10 +477,6 @@ def query_document(
     # ===================================
     # Generate Answer
     # ===================================
-
-    query_type = classify_query(
-    rewritten_question
-)
 
     answer = generate_answer(
         rewritten_question,
@@ -363,18 +517,32 @@ def query_document(
 
     citations = []
 
-    for idx, source in enumerate(
-        sources[:5]
-    ):
+    seen = set()
+
+    for source in sources:
+
+        key = (
+            source["document"],
+            source["page"]
+    )
+
+        if key in seen:
+            continue
+
+        seen.add(key)
 
         citations.append({
-            "source_id": idx + 1,
-        "document": source["document"],
-        "page": source.get(
-            "page",
-            "N/A"
-        )
-})
+
+            "source_id": len(citations) + 1,
+
+            "document": source["document"],
+
+            "page": source["page"]
+
+    })
+
+        if len(citations) == 5:
+            break
 
     # ===================================
     # Save Assistant Message
@@ -401,10 +569,13 @@ def query_document(
 
         "confidence": confidence,
 
-        "retrieved_dense": len(
-            dense_chunks
-        ),
+        "retrieved_parent": len(dense_chunks),
 
+        "retrieved_expanded": len(expanded_chunks),
+
+        "retrieved_compressed": len(compressed_chunks),
+        "retrieved_dense": len(expanded_chunks),
+    
         "retrieved_bm25": len(
             bm25_chunks
         ),
@@ -413,8 +584,7 @@ def query_document(
             hybrid_chunks
         ),
 
-        "sources": sources,
-
+        "sources": sources[:5],
         "citations": citations,
 
         "context_chunks": context_chunks

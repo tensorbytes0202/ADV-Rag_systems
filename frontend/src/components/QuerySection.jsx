@@ -3,17 +3,16 @@ import api from "../services/api";
 import SourceCard from "./SourceCard";
 import ConfidenceBar from "./ConfidenceBar";
 import ChunkViewer from "./ChunkViewer";
+
 function QuerySection() {
 
     const [question, setQuestion] = useState("");
-
     const [result, setResult] = useState(null);
-
     const [loading, setLoading] = useState(false);
 
     const handleAsk = async () => {
 
-        if (!question) return;
+        if (!question.trim()) return;
 
         setLoading(true);
 
@@ -26,19 +25,29 @@ function QuerySection() {
                 }
             );
 
-            setResult(
-                response.data
-            );
+            console.log("========== RESPONSE ==========");
+            console.log(response.data);
+
+            console.log("========== SOURCES ==========");
+            console.log(response.data.sources);
+
+            setResult(response.data);
 
         } catch (error) {
 
-            console.log(error);
+            console.error("QUERY ERROR");
+            console.error(error);
+
+            if (error.response) {
+                console.error(error.response.data);
+            }
 
         } finally {
 
             setLoading(false);
 
         }
+
     };
 
     return (
@@ -53,11 +62,7 @@ function QuerySection() {
                 type="text"
                 placeholder="Ask anything..."
                 value={question}
-                onChange={(e) =>
-                    setQuestion(
-                        e.target.value
-                    )
-                }
+                onChange={(e) => setQuestion(e.target.value)}
                 className="border p-2 w-2/3 rounded"
             />
 
@@ -84,7 +89,7 @@ function QuerySection() {
                             Answer
                         </h3>
 
-                        <p className="mt-2">
+                        <p className="mt-2 whitespace-pre-wrap">
                             {result.answer}
                         </p>
 
@@ -94,41 +99,40 @@ function QuerySection() {
 
                         <div className="mt-4">
 
-                            <strong>
-                                Dense Results:
-                            </strong>
-
-                            {" "}
-
-                            {result.retrieved_dense}
+                            <strong>Parent Results:</strong>{" "}
+                            {result.retrieved_parent}
 
                         </div>
 
                         <div className="mt-2">
 
-                            <strong>
-                                BM25 Results:
-                            </strong>
+                            <strong>Expanded Results:</strong>{" "}
+                            {result.retrieved_expanded}
 
-                            {" "}
+                        </div>
 
+                        <div className="mt-2">
+
+                            <strong>Compressed Results:</strong>{" "}
+                            {result.retrieved_compressed}
+
+                        </div>
+
+                        <div className="mt-2">
+
+                            <strong>BM25 Results:</strong>{" "}
                             {result.retrieved_bm25}
 
                         </div>
 
                         <div className="mt-2">
 
-                            <strong>
-                                Hybrid Results:
-                            </strong>
-
-                            {" "}
-
+                            <strong>Hybrid Results:</strong>{" "}
                             {result.retrieved_hybrid}
 
                         </div>
 
-                        {/* Sources Section */}
+                        {/* Sources */}
 
                         <div className="mt-6">
 
@@ -137,22 +141,23 @@ function QuerySection() {
                             </h3>
 
                             {
-                                result.sources?.map(
-                                    (source, index) => (
+                                Array.isArray(result.sources) &&
+                                result.sources.map((source, index) => (
 
-                                        <SourceCard
-                                            key={index}
-                                            source={source}
-                                        />
+                                    <SourceCard
+                                        key={index}
+                                        source={source}
+                                    />
 
-                                    )
-                                )
+                                ))
                             }
 
                         </div>
 
+                        {/* Retrieved Chunks */}
+
                         {
-                            result.context_chunks &&
+                            Array.isArray(result.context_chunks) &&
                             (
                                 <ChunkViewer
                                     chunks={result.context_chunks}
@@ -168,6 +173,7 @@ function QuerySection() {
         </div>
 
     );
+
 }
 
 export default QuerySection;

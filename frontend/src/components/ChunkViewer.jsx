@@ -22,14 +22,34 @@ function ChunkViewer({ chunks }) {
                             </p>
 
                             <p className="text-sm mt-2">
-                                Score:
+                                Rerank Score:
                                 {" "}
                                 {chunk.rerank_score.toFixed(2)}
                             </p>
 
-                            <p className="mt-3">
+                            {
+                                chunk.page && (
+                                    <p className="text-sm mt-1">
+                                        Page:
+                                        {" "}
+                                        {chunk.page}
+                                    </p>
+                                )
+                            }
+
+                            {
+                                chunk.document && (
+                                    <p className="text-sm mt-1">
+                                        Document:
+                                        {" "}
+                                        {chunk.document}
+                                    </p>
+                                )
+                            }
+
+                            <div className="mt-3 text-sm whitespace-pre-wrap">
                                 {chunk.text}
-                            </p>
+                            </div>
 
                         </div>
 

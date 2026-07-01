@@ -5,21 +5,27 @@ function SourceCard({ source }) {
         <div className="border rounded-lg p-3 mb-2 bg-gray-50">
 
             <p>
-                <strong>Document:</strong>
-                {" "}
-                {source.document}
+                <strong>Document:</strong>{" "}
+                {source?.document ?? "Unknown"}
             </p>
 
             <p>
-                <strong>Chunk ID:</strong>
-                {" "}
-                {source.chunk_id}
+                <strong>Page:</strong>{" "}
+                {source?.page ?? "N/A"}
             </p>
 
             <p>
-                <strong>Vector Score:</strong>
-                {" "}
-                {source.vector_score.toFixed(3)}
+                <strong>Chunk ID:</strong>{" "}
+                {source?.chunk_id ?? "N/A"}
+            </p>
+
+            <p>
+                <strong>Vector Score:</strong>{" "}
+                {
+                    typeof source?.vector_score === "number"
+                        ? source.vector_score.toFixed(3)
+                        : "N/A"
+                }
             </p>
 
         </div>

@@ -4,7 +4,10 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import (
     VectorParams,
     Distance,
-    PointStruct
+    PointStruct,
+    Filter,
+    FieldCondition,
+    MatchValue
 )
 
 client = QdrantClient(
@@ -15,17 +18,24 @@ client = QdrantClient(
 COLLECTION_NAME = "rag_documents"
 
 
+# =====================================================
+# CREATE COLLECTION
+# =====================================================
+
 def create_collection():
+
     print("Connecting Qdrant...")
 
     collections = client.get_collections()
+
     print("Connected Successfully")
-    existing_collections = [
+
+    existing = [
         collection.name
         for collection in collections.collections
     ]
 
-    if COLLECTION_NAME not in existing_collections:
+    if COLLECTION_NAME not in existing:
 
         client.create_collection(
             collection_name=COLLECTION_NAME,
@@ -35,16 +45,16 @@ def create_collection():
             )
         )
 
-        print(
-            f"Collection '{COLLECTION_NAME}' created."
-        )
+        print(f"Collection '{COLLECTION_NAME}' created.")
 
     else:
 
-        print(
-            f"Collection '{COLLECTION_NAME}' already exists."
-        )
+        print(f"Collection '{COLLECTION_NAME}' already exists.")
 
+
+# =====================================================
+# STORE EMBEDDINGS
+# =====================================================
 
 def store_embeddings(
     chunks,
@@ -52,90 +62,181 @@ def store_embeddings(
     document_name
 ):
 
-    if not chunks:
+    if len(chunks) == 0:
         print("No chunks found")
         return
 
-    if not embeddings:
+    if len(embeddings) == 0:
         print("No embeddings found")
         return
 
     points = []
 
-    for chunk_data, embedding in zip(
-    chunks,
-    embeddings
-):
+    for chunk, embedding in zip(chunks, embeddings):
 
         points.append(
+
             PointStruct(
-            id=str(uuid.uuid4()),
-            vector=embedding,
-            payload={
-                "chunk_id": str(
-                    uuid.uuid4()
-                ),
 
-                "text": chunk_data[
-                    "text"
-                ],
+                id=str(uuid.uuid4()),
 
-                "document_name": chunk_data[
-                    "document"
-                ],
+                vector=embedding,
 
-                "page": chunk_data[
-                    "page"
-                ]
-            }
+                payload={
+
+    "chunk_id": str(uuid.uuid4()),
+
+    "parent_id": chunk["parent_id"],
+
+    "child_id": chunk["child_id"],
+
+    "parent_text": chunk["parent_text"],
+
+    "text": chunk["text"],
+
+    "document_name": chunk["document"],
+
+    "page": chunk["page"]
+
+}
+
+            )
+
         )
-    )
 
-    batch_size = 10
+    batch_size = 100
 
     total_batches = (
+
         len(points) + batch_size - 1
+
     ) // batch_size
 
-    print(
-        f"Total Points: {len(points)}"
-    )
+    print(f"Total Points : {len(points)}")
 
-    print(
-        f"Total Batches: {total_batches}"
-    )
+    print(f"Total Batches : {total_batches}")
 
     for i in range(
-    0,
-    len(points),
-    batch_size
-):
+
+        0,
+
+        len(points),
+
+        batch_size
+
+    ):
 
         batch = points[i:i + batch_size]
 
         print(
-        f"Uploading Batch {(i // batch_size) + 1}/{total_batches}"
-    )
+
+            f"Uploading Batch {(i//batch_size)+1}/{total_batches}"
+
+        )
 
         client.upsert(
+
             collection_name=COLLECTION_NAME,
+
             points=batch
-    )
+
+        )
 
         print(
-        f"Uploaded Batch {(i // batch_size) + 1}/{total_batches}"
-    )
 
+            f"Uploaded Batch {(i//batch_size)+1}/{total_batches}"
+
+        )
+
+    print("Embedding Upload Complete")
+
+
+# =====================================================
+# SEARCH
+# =====================================================
 
 def search_similar_chunks(
+
     query_embedding,
+
     limit=10,
+
+    document_name=None,
+
+    page=None
+
 ):
 
+    query_filter = None
+
+    conditions = []
+
+    # -------------------------------
+    # Document Filter
+    # -------------------------------
+
+    if document_name is not None:
+
+        conditions.append(
+
+            FieldCondition(
+
+                key="document_name",
+
+                match=MatchValue(
+
+                    value=document_name
+
+                )
+
+            )
+
+        )
+
+    # -------------------------------
+    # Page Filter
+    # -------------------------------
+
+    if page is not None:
+
+        conditions.append(
+
+            FieldCondition(
+
+                key="page",
+
+                match=MatchValue(
+
+                    value=page
+
+                )
+
+            )
+
+        )
+
+    # -------------------------------
+
+    if len(conditions) > 0:
+
+        query_filter = Filter(
+
+            must=conditions
+
+        )
+
+    # -------------------------------
+
     search_result = client.query_points(
+
         collection_name=COLLECTION_NAME,
+
         query=query_embedding,
+
+        query_filter=query_filter,
+
         limit=limit
+
     )
 
     return search_result.points

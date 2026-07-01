@@ -4,23 +4,19 @@ import ollama
 def generate_queries(question):
 
     prompt = f"""
-You are helping an Operating System RAG system.
-
 Generate 4 alternative search queries.
 
 Rules:
-1. Keep same meaning.
-2. Stay in Operating System / Computer Science domain.
-3. Do not change domain.
-4. Return only queries.
-5. One query per line.
 
+- Same meaning.
+- Same domain.
+- Do NOT number the queries.
+- Do NOT use bullets.
+- Do NOT write explanations.
+- Return ONLY one query per line.
 
 Question:
 {question}
-
-Return only queries.
-One per line.
 """
 
     response = ollama.chat(
@@ -33,14 +29,63 @@ One per line.
         ]
     )
 
-    queries = response["message"]["content"].split("\n")
+    text = response["message"]["content"]
 
-    queries = [
-        q.strip()
-        for q in queries
-        if q.strip()
-    ]
+    queries = []
 
-    queries.insert(0, question)
+    for line in text.split("\n"):
 
-    return queries
+        line = line.strip()
+
+        if not line:
+            continue
+
+        # remove bullets
+
+        if line.startswith("-"):
+            line = line[1:].strip()
+
+        if line.startswith("*"):
+            line = line[1:].strip()
+
+        # remove numbering
+
+        if "." in line:
+
+            left = line.split(".", 1)[0]
+
+            if left.isdigit():
+
+                line = line.split(".", 1)[1].strip()
+
+        # ignore headings
+
+        lower = line.lower()
+
+        if "alternative search queries" in lower:
+            continue
+
+        if "here are" in lower:
+            continue
+
+        queries.append(line)
+
+    # remove duplicates
+
+    final_queries = []
+
+    seen = set()
+
+    final_queries.append(question)
+
+    seen.add(question.lower())
+
+    for q in queries:
+
+        if q.lower() not in seen:
+
+            seen.add(q.lower())
+
+            final_queries.append(q)
+
+    return final_queries[:5]
