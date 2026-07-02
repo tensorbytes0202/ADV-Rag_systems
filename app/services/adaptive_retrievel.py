@@ -57,6 +57,6 @@ def get_retrieval_config(query_type):
     }
 
     return configs.get(
-        query_type,
-        configs["definition"]
-    )
+    query_type.lower(),
+    configs["definition"]
+)

@@ -1,12 +1,5 @@
 
-from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
-from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
-from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
-from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
-from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
-from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
-from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
-from transformers.models.phi4_multimodal import image_processing_phi4_multimodal_fast
+from app.services import metadata_parser
 from app.services.metadata_parser import extract_metadata
 from typing import List
 
@@ -67,12 +60,18 @@ rrf_fusion
 from app.services.query_classifier import (
     classify_query
 )
+from app.services.verification_service import (
+    verify_answer
+)
 from app.services.parent_child_service import (
     get_parent_chunks
 )
 
 from app.services.adaptive_retrievel import (
     get_retrieval_config
+)
+from app.services.document_registry import (
+    get_active_document
 )
 router = APIRouter()
 
@@ -97,6 +96,28 @@ def query_document(
     metadata = extract_metadata(
     rewritten_question
         )
+    print("=" * 50)
+    print("FINAL DOCUMENT FILTER")
+    print(metadata["document_name"])
+    print("=" * 50)
+        # ===================================
+        # Active Document
+        # ===================================
+
+    import os
+
+    if metadata["document_name"] is None:
+            metadata["document_name"] = get_active_document()
+
+    if metadata["document_name"]:
+        metadata["document_name"] = os.path.basename(
+            metadata["document_name"]
+    ).strip()
+
+    print("=" * 50)
+    print("ACTIVE DOCUMENT")
+    print(metadata["document_name"])
+    print("=" * 50)
     print("=" * 50)
     print("METADATA")
     print(metadata)
@@ -152,8 +173,15 @@ def query_document(
         print("=" * 50)
 
         if metadata["document_name"] or metadata["page"]:
+            print("=" * 60)
+            print("QUERY EMBEDDING TYPE :", type(query_embedding))
+            print("QUERY EMBEDDING LENGTH :", len(query_embedding))
+            print("FIRST 5 VALUES :", query_embedding[:5])
+            print("=" * 60)
 
             results = search_similar_chunks(
+
+                
 
             query_embedding,
 
@@ -171,7 +199,7 @@ def query_document(
 
             query_embedding,
 
-            limit=20
+            limit=config["dense_top_k"]
 
     )
 
@@ -488,11 +516,15 @@ def query_document(
     # Verification Layer
     # ===================================
 
-    # verification = verify_answer(
-    #     rewritten_question,
-    #     answer,
-    #     context
-    # )
+    verification = verify_answer(
+        rewritten_question,
+         answer,
+         context
+     )
+    print("=" * 60)
+    print("VERIFICATION RESULT")
+    print(verification)
+    print("=" * 60)
 
     # if verification != "SUPPORTED":
 
@@ -509,7 +541,7 @@ def query_document(
     print(answer)
     print("=" * 50 + "\n")
 
-    verification = "DISABLED"
+    
 
     # ===================================
     # Citations
@@ -574,7 +606,7 @@ def query_document(
         "retrieved_expanded": len(expanded_chunks),
 
         "retrieved_compressed": len(compressed_chunks),
-        "retrieved_dense": len(expanded_chunks),
+        "retrieved_dense": len(results),
     
         "retrieved_bm25": len(
             bm25_chunks

@@ -1,5 +1,4 @@
 import uuid
-
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     VectorParams,
@@ -171,31 +170,36 @@ def search_similar_chunks(
 
     conditions = []
 
-    # -------------------------------
-    # Document Filter
-    # -------------------------------
+    # ==========================================
+    # Incoming Search Request
+    # ==========================================
 
-    if document_name is not None:
+    print("=" * 60)
+    print("SEARCH REQUEST")
+    print("Document :", repr(document_name))
+    print("Page     :", page)
+    print("=" * 60)
+
+    # ==========================================
+    # Document Filter
+    # ==========================================
+
+    if document_name:
+
+        document_name = document_name.strip()
 
         conditions.append(
-
             FieldCondition(
-
                 key="document_name",
-
                 match=MatchValue(
-
                     value=document_name
-
-                )
-
             )
-
         )
+    )
 
-    # -------------------------------
+    # ==========================================
     # Page Filter
-    # -------------------------------
+    # ==========================================
 
     if page is not None:
 
@@ -215,7 +219,9 @@ def search_similar_chunks(
 
         )
 
-    # -------------------------------
+    # ==========================================
+    # Build Query Filter
+    # ==========================================
 
     if len(conditions) > 0:
 
@@ -225,7 +231,18 @@ def search_similar_chunks(
 
         )
 
-    # -------------------------------
+    # ==========================================
+    # Debug Query Filter
+    # ==========================================
+
+    print("=" * 60)
+    print("QUERY FILTER")
+    print(query_filter)
+    print("=" * 60)
+
+    # ==========================================
+    # Qdrant Search
+    # ==========================================
 
     search_result = client.query_points(
 
@@ -233,10 +250,44 @@ def search_similar_chunks(
 
         query=query_embedding,
 
-        query_filter=query_filter,
+        
 
         limit=limit
 
-    )
+    )   
+    print("=" * 60)
+    print("FILTER VALUE :", repr(document_name))
+
+    if len(search_result.points):
+
+        print("PAYLOAD VALUE :", repr(search_result.points[0].payload["document_name"]))
+
+    print("=" * 60)
+
+    # ==========================================
+    # Debug Results
+    # ==========================================
+
+    print("=" * 60)
+    print("RESULTS FOUND :", len(search_result.points))
+    print("=" * 60)
+
+    if len(search_result.points) > 0:
+
+        print("FIRST PAYLOAD")
+
+        print(search_result.points[0].payload)
+
+        print("=" * 60)
 
     return search_result.points
+
+def debug_search():
+
+    result = client.query_points(
+        collection_name=COLLECTION_NAME,
+        query=[0.0] * 384,
+        limit=1
+    )
+
+    print(result.points)

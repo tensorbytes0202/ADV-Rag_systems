@@ -1,3 +1,4 @@
+import json
 import ollama
 
 
@@ -8,27 +9,35 @@ def verify_answer(
 ):
 
     prompt = f"""
-You are a fact-checking system.
+You are an expert RAG verification system.
 
 Question:
 {question}
 
-Answer:
-{answer}
-
-Context:
+Retrieved Context:
 {context}
 
+Generated Answer:
+{answer}
+
 Task:
-Check whether every important claim in the answer is supported by the context.
 
-Return ONLY one word:
+Verify whether the generated answer is fully supported by the retrieved context.
 
-SUPPORTED
+Return ONLY valid JSON in this format:
 
-or
+{{
+    "supported": true,
+    "confidence": 0.94,
+    "reason": "Answer is completely supported by retrieved context."
+}}
 
-UNSUPPORTED
+Rules:
+
+- supported must be true or false
+- confidence must be between 0 and 1
+- reason must be one short sentence
+- Do not return anything except JSON.
 """
 
     response = ollama.chat(
@@ -41,13 +50,22 @@ UNSUPPORTED
         ]
     )
 
-    result = (
-        response["message"]["content"]
-        .strip()
-        .upper()
-    )
+    content = response["message"]["content"].strip()
 
-    if "SUPPORTED" in result and "UNSUPPORTED" not in result:
-        return "SUPPORTED"
+    try:
 
-    return "UNSUPPORTED"
+        result = json.loads(content)
+
+    except Exception:
+
+        result = {
+
+            "supported": False,
+
+            "confidence": 0.0,
+
+            "reason": "Verification parsing failed."
+
+        }
+
+    return result
