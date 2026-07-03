@@ -16,10 +16,6 @@ from app.services.vector_store import (
     store_embeddings
 )
 
-from app.services.chunk_store import (
-    save_chunks,
-    save_parent_chunks
-)
 
 from app.services.document_registry import (
 
@@ -133,12 +129,7 @@ async def upload_pdf(
         "Total Chunks:",
         len(chunks)
     )
-    save_parent_chunks(parents)
-
-    save_chunks(
-        chunks
-    )
-
+   
     embeddings = generate_embeddings(
         [
             chunk["text"]

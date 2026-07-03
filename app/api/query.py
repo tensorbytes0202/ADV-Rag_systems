@@ -1,4 +1,5 @@
 
+from openai.types.beta.realtime import response_function_call_arguments_delta_event
 from app.services import metadata_parser
 from app.services.metadata_parser import extract_metadata
 from typing import List
@@ -28,10 +29,6 @@ from app.services.generation_service import (
 
 from app.services.bm_25_service import (
     bm25_search
-)
-
-from app.services.chunk_store import (
-    get_chunks
 )
 
 from app.services.chat_memory import (
@@ -224,43 +221,25 @@ def query_document(
     # ===================================
     # BM25 Retrieval
     # ===================================
-
-    all_chunks = get_chunks()
-    if metadata["document_name"]:
-
-        all_chunks = [
-
-        chunk
-
-        for chunk in all_chunks
-
-        if chunk["document"] == metadata["document_name"]
-
-    ]
-
-    if metadata["page"]:
-
-        all_chunks = [
-
-        chunk
-
-            for chunk in all_chunks
-
-            if chunk["page"] == metadata["page"]
-
-    ]
-
-    bm25_results = bm25_search(
-        rewritten_question,
-        all_chunks,
-        top_k=config["bm25_top_k"]
-    )
+    bm25_results = []
 
     # ===================================
 # Parent Retrieval
 # ===================================
 
-    dense_chunks = get_parent_chunks(results)
+    dense_chunks = []
+
+    seen = set()
+
+    for result in results:
+
+        parent = result.payload.get("parent_text")
+
+        if parent and parent not in seen:
+
+            seen.add(parent)
+
+            dense_chunks.append(parent)
     expanded_chunks = expand_context(
     results,
     window_size=config["window_size"]
@@ -327,20 +306,11 @@ def query_document(
 
     bm25_chunks = []
 
-    for chunk, score in bm25_results:
-
-        bm25_chunks.append(
-        chunk["text"]
-    )
-
     # ===================================
     # Hybrid Merge
     # ===================================
 
-    hybrid_chunks = rrf_fusion(
-    compressed_chunks,
-    bm25_chunks
-            )
+    hybrid_chunks = compressed_chunks
 
     # ===================================
     # RRF Debug
