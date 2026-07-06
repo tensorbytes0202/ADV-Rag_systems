@@ -10,20 +10,19 @@ function QuerySection() {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    const handleAsk = async () => {
+    const handleAsk = async (customQuestion = null) => {
 
-        if (!question.trim()) return;
+        const finalQuestion = customQuestion || question;
+
+        if (!finalQuestion.trim()) return;
 
         setLoading(true);
 
         try {
 
-            const response = await api.post(
-                "/query",
-                {
-                    question
-                }
-            );
+            const response = await api.post("/query", {
+                question: finalQuestion
+            });
 
             console.log("========== RESPONSE ==========");
             console.log(response.data);
@@ -67,7 +66,7 @@ function QuerySection() {
             />
 
             <button
-                onClick={handleAsk}
+                onClick={() => handleAsk()}
                 className="ml-4 bg-green-600 text-white px-4 py-2 rounded"
             >
                 Ask
@@ -93,43 +92,76 @@ function QuerySection() {
                             {result.answer}
                         </p>
 
+                        {/* Suggested Questions */}
+
+                        {
+                            result.followup_questions &&
+                            result.followup_questions.length > 0 && (
+
+                                <div className="mt-6">
+
+                                    <h3 className="font-bold text-lg mb-3">
+                                        Suggested Questions
+                                    </h3>
+
+                                    <div className="space-y-2">
+
+                                        {
+                                            result.followup_questions.map((q, index) => (
+
+                                                <button
+                                                    key={index}
+                                                    onClick={() => {
+
+                                                        setQuestion(q);
+
+                                                        setTimeout(() => {
+                                                            handleAsk(q);
+                                                        }, 100);
+
+                                                    }}
+                                                    className="w-full text-left p-3 rounded-lg border border-gray-300 hover:bg-gray-100 transition"
+                                                >
+                                                    {q}
+                                                </button>
+
+                                            ))
+                                        }
+
+                                    </div>
+
+                                </div>
+
+                            )
+                        }
+
                         <ConfidenceBar
                             confidence={result.confidence}
                         />
 
                         <div className="mt-4">
-
                             <strong>Parent Results:</strong>{" "}
                             {result.retrieved_parent}
-
                         </div>
 
                         <div className="mt-2">
-
                             <strong>Expanded Results:</strong>{" "}
                             {result.retrieved_expanded}
-
                         </div>
 
                         <div className="mt-2">
-
                             <strong>Compressed Results:</strong>{" "}
                             {result.retrieved_compressed}
-
                         </div>
 
                         <div className="mt-2">
-
                             <strong>BM25 Results:</strong>{" "}
                             {result.retrieved_bm25}
-
                         </div>
 
                         <div className="mt-2">
-
                             <strong>Hybrid Results:</strong>{" "}
                             {result.retrieved_hybrid}
-
                         </div>
 
                         {/* Sources */}
@@ -157,11 +189,12 @@ function QuerySection() {
                         {/* Retrieved Chunks */}
 
                         {
-                            Array.isArray(result.context_chunks) &&
-                            (
+                            Array.isArray(result.context_chunks) && (
+
                                 <ChunkViewer
                                     chunks={result.context_chunks}
                                 />
+
                             )
                         }
 

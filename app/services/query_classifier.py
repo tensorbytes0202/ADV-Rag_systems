@@ -1,23 +1,67 @@
-def classify_query(question):
+import json
+import ollama
 
-    q = question.lower()
 
-    if "difference" in q or "compare" in q:
-        return "COMPARISON"
+SYSTEM_PROMPT = """
+You are a Query Classification Engine.
 
-    if "advantage" in q:
-        return "ADVANTAGES"
+Classify the user's question into ONLY ONE category.
 
-    if "disadvantage" in q:
-        return "DISADVANTAGES"
+Categories:
 
-    if "steps" in q or "how to" in q:
-        return "STEPS"
+DEFINITION
+EXPLANATION
+COMPARISON
+LIST
+PROCEDURE
+SUMMARY
+CODE
+FACTUAL
 
-    if "explain" in q:
+Return ONLY valid JSON.
+
+Example:
+
+{
+    "query_type": "DEFINITION"
+}
+"""
+
+
+def classify_query(question: str):
+
+    response = ollama.chat(
+
+        model="llama3.2",
+
+        messages=[
+
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT
+            },
+
+            {
+                "role": "user",
+                "content": question
+            }
+
+        ],
+
+        options={
+            "temperature": 0
+        }
+
+    )
+
+    try:
+
+        result = json.loads(
+            response["message"]["content"]
+        )
+
+        return result["query_type"]
+
+    except Exception:
+
         return "EXPLANATION"
-
-    if "list" in q:
-        return "LIST"
-
-    return "DEFINITION"

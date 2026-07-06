@@ -1,6 +1,4 @@
 
-from openai.types.beta.realtime import response_function_call_arguments_delta_event
-from app.services import metadata_parser
 from app.services.metadata_parser import extract_metadata
 from typing import List
 
@@ -9,6 +7,9 @@ from pydantic import BaseModel
 
 from app.services.embedding_service import (
     generate_query_embedding
+)
+from app.services.query_rewriter import (
+    rewrite_query
 )
 
 from app.services.vector_store import (
@@ -19,7 +20,7 @@ from app.services.reranker_services import (
     rerank_chunks
 )
 
-from app.services.confidence_services import (
+from app.services.confidence_service import (
     calculate_confidence
 )
 
@@ -27,17 +28,14 @@ from app.services.generation_service import (
     generate_answer
 )
 
-from app.services.bm_25_service import (
-    bm25_search
-)
+    # from app.services.bm_25_service import (
+    #     bm25_search
+    # )
 
 from app.services.chat_memory import (
     add_message
 )
 
-from app.services.query_rewrite import (
-    rewrite_question
-)
 from app.services.context_expansion import (
     expand_context
 )
@@ -51,22 +49,19 @@ from app.services.context_compression import (
 from app.services.multi_query_service import (
     generate_queries
 )
-from app.services.rrf_service import(
-rrf_fusion
-)
+# from app.services.rrf_service import(
+# rrf_fusion
+# )
 from app.services.query_classifier import (
     classify_query
 )
 from app.services.verification_service import (
     verify_answer
 )
-from app.services.parent_child_service import (
-    get_parent_chunks
-)
 
-from app.services.adaptive_retrievel import (
-    get_retrieval_config
-)
+
+
+from app.services.query_router import get_retrieval_config
 from app.services.document_registry import (
     get_active_document
 )
@@ -87,7 +82,7 @@ def query_document(
     # Rewrite Question
     # ===================================
 
-    rewritten_question = rewrite_question(
+    rewritten_question = rewrite_query(
     request.question
 )
     metadata = extract_metadata(
@@ -159,26 +154,23 @@ def query_document(
 
     for query in queries:
 
-        query_embedding = (generate_query_embedding(
-            query
-        )
-    )
+        
+
+        print("=" * 60)
+        print("MULTI QUERY")
+        for q in queries:
+            print(q)
+            print("=" * 60)
+        query_embedding = generate_query_embedding(query)
+    
         print("=" * 50)
         print("Searching With Metadata")
         print("Document :", metadata["document_name"])
         print("Page :", metadata["page"])
         print("=" * 50)
 
-        if metadata["document_name"] or metadata["page"]:
-            print("=" * 60)
-            print("QUERY EMBEDDING TYPE :", type(query_embedding))
-            print("QUERY EMBEDDING LENGTH :", len(query_embedding))
-            print("FIRST 5 VALUES :", query_embedding[:5])
-            print("=" * 60)
-
-            results = search_similar_chunks(
-
-                
+        
+        results = search_similar_chunks(
 
             query_embedding,
 
@@ -188,17 +180,7 @@ def query_document(
 
             page=metadata["page"]
 
-    )
-
-        else:
-
-            results = search_similar_chunks(
-
-            query_embedding,
-
-            limit=config["dense_top_k"]
-
-    )
+)
 
         all_results.extend(results)
 
@@ -206,17 +188,29 @@ def query_document(
 
     for result in all_results:
 
-        chunk_id = result.payload.get(
-        "chunk_id"
-    )
+        chunk_id = result.payload.get("chunk_id")
 
-        unique_results[
-        chunk_id
-    ] = result
+        if chunk_id not in unique_results:
 
-    results = list(
-    unique_results.values()
+            unique_results[chunk_id] = result
+
+        else:
+
+            if result.score > unique_results[chunk_id].score:
+
+                unique_results[chunk_id] = result
+
+    results = list(unique_results.values())
+
+    results.sort(
+        key=lambda x: x.score,
+        reverse=True
 )
+
+    print("=" * 60)
+    print("TOTAL RETRIEVED :", len(all_results))
+    print("UNIQUE CHUNKS   :", len(results))
+    print("=" * 60)
 
     # ===================================
     # BM25 Retrieval
