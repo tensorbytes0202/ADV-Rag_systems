@@ -1,36 +1,49 @@
 function SourceCard({ source }) {
 
+    const openPDF = () => {
+
+        const url =
+            `http://127.0.0.1:8000/pdf/${source.document}#page=${source.page}`;
+
+        window.open(url, "_blank");
+
+    };
+
     return (
 
-        <div className="border rounded-lg p-3 mb-2 bg-gray-50">
+        <div
+            className="border rounded-lg p-4 mb-3 shadow cursor-pointer hover:bg-gray-50"
+            onClick={openPDF}
+        >
+
+            <h3 className="font-bold">
+
+                {source.document}
+
+            </h3>
 
             <p>
-                <strong>Document:</strong>{" "}
-                {source?.document ?? "Unknown"}
+
+                Page : {source.page}
+
             </p>
 
             <p>
-                <strong>Page:</strong>{" "}
-                {source?.page ?? "N/A"}
+
+                Chunk : {source.chunk_id}
+
             </p>
 
             <p>
-                <strong>Chunk ID:</strong>{" "}
-                {source?.chunk_id ?? "N/A"}
-            </p>
 
-            <p>
-                <strong>Vector Score:</strong>{" "}
-                {
-                    typeof source?.vector_score === "number"
-                        ? source.vector_score.toFixed(3)
-                        : "N/A"
-                }
+                Score : {source.score?.toFixed(3)}
+
             </p>
 
         </div>
 
     );
+
 }
 
 export default SourceCard;
