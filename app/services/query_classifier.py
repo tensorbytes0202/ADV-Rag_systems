@@ -32,7 +32,7 @@ def classify_query(question: str):
 
     response = ollama.chat(
 
-        model="llama3.2",
+        model="llama3:latest",
 
         messages=[
 

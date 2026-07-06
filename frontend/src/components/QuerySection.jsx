@@ -3,6 +3,8 @@ import api from "../services/api";
 import SourceCard from "./SourceCard";
 import ConfidenceBar from "./ConfidenceBar";
 import ChunkViewer from "./ChunkViewer";
+import PipelineTimeline from "./PipelineTimeline";
+import AnalyticsDashboard from "./AnalyticsDashboard";
 
 function QuerySection() {
 
@@ -20,9 +22,12 @@ function QuerySection() {
 
         try {
 
-            const response = await api.post("/query", {
-                question: finalQuestion
-            });
+            const response = await api.post(
+                "/query",
+                {
+                    question: finalQuestion
+                }
+            );
 
             console.log("========== RESPONSE ==========");
             console.log(response.data);
@@ -57,24 +62,28 @@ function QuerySection() {
                 Ask Question
             </h2>
 
-            <input
-                type="text"
-                placeholder="Ask anything..."
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                className="border p-2 w-2/3 rounded"
-            />
+            <div className="flex gap-4">
 
-            <button
-                onClick={() => handleAsk()}
-                className="ml-4 bg-green-600 text-white px-4 py-2 rounded"
-            >
-                Ask
-            </button>
+                <input
+                    type="text"
+                    placeholder="Ask anything..."
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    className="border p-2 flex-1 rounded"
+                />
+
+                <button
+                    onClick={() => handleAsk()}
+                    className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+                >
+                    Ask
+                </button>
+
+            </div>
 
             {
                 loading &&
-                <p className="mt-4">
+                <p className="mt-4 text-blue-600">
                     Thinking...
                 </p>
             }
@@ -82,15 +91,36 @@ function QuerySection() {
             {
                 result && (
 
-                    <div className="mt-6">
+                    <div className="mt-8">
 
-                        <h3 className="font-bold text-lg">
+                        {/* Answer */}
+
+                        <h3 className="font-bold text-2xl">
                             Answer
                         </h3>
 
-                        <p className="mt-2 whitespace-pre-wrap">
+                        <p className="mt-3 whitespace-pre-wrap leading-7">
                             {result.answer}
                         </p>
+
+                        {/* Confidence */}
+
+                        <div className="mt-6">
+
+                            <ConfidenceBar
+                                confidence={result.confidence}
+                            />
+                            <AnalyticsDashboard
+                                result={result}
+                            />
+
+                        </div>
+
+                        {/* Pipeline */}
+
+                        <PipelineTimeline
+                            result={result}
+                        />
 
                         {/* Suggested Questions */}
 
@@ -98,34 +128,50 @@ function QuerySection() {
                             result.followup_questions &&
                             result.followup_questions.length > 0 && (
 
-                                <div className="mt-6">
+                                <div className="mt-8">
 
-                                    <h3 className="font-bold text-lg mb-3">
+                                    <h3 className="font-bold text-xl mb-4">
+
                                         Suggested Questions
+
                                     </h3>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
 
                                         {
-                                            result.followup_questions.map((q, index) => (
 
-                                                <button
-                                                    key={index}
-                                                    onClick={() => {
+                                            result.followup_questions.map(
 
-                                                        setQuestion(q);
+                                                (q, index) => (
 
-                                                        setTimeout(() => {
-                                                            handleAsk(q);
-                                                        }, 100);
+                                                    <button
 
-                                                    }}
-                                                    className="w-full text-left p-3 rounded-lg border border-gray-300 hover:bg-gray-100 transition"
-                                                >
-                                                    {q}
-                                                </button>
+                                                        key={index}
 
-                                            ))
+                                                        onClick={() => {
+
+                                                            setQuestion(q);
+
+                                                            setTimeout(() => {
+
+                                                                handleAsk(q);
+
+                                                            }, 100);
+
+                                                        }}
+
+                                                        className="w-full text-left border rounded-lg p-3 hover:bg-gray-100 transition"
+
+                                                    >
+
+                                                        {q}
+
+                                                    </button>
+
+                                                )
+
+                                            )
+
                                         }
 
                                     </div>
@@ -135,53 +181,87 @@ function QuerySection() {
                             )
                         }
 
-                        <ConfidenceBar
-                            confidence={result.confidence}
-                        />
+                        {/* Retrieval Statistics */}
 
-                        <div className="mt-4">
-                            <strong>Parent Results:</strong>{" "}
-                            {result.retrieved_parent}
-                        </div>
+                        <div className="mt-8 bg-gray-50 rounded-xl p-5">
 
-                        <div className="mt-2">
-                            <strong>Expanded Results:</strong>{" "}
-                            {result.retrieved_expanded}
-                        </div>
+                            <h3 className="font-bold text-xl mb-4">
 
-                        <div className="mt-2">
-                            <strong>Compressed Results:</strong>{" "}
-                            {result.retrieved_compressed}
-                        </div>
+                                Retrieval Statistics
 
-                        <div className="mt-2">
-                            <strong>BM25 Results:</strong>{" "}
-                            {result.retrieved_bm25}
-                        </div>
+                            </h3>
 
-                        <div className="mt-2">
-                            <strong>Hybrid Results:</strong>{" "}
-                            {result.retrieved_hybrid}
+                            <div className="grid grid-cols-2 gap-4">
+
+                                <div>
+
+                                    <strong>Parent Results :</strong>{" "}
+                                    {result.retrieved_parent}
+
+                                </div>
+
+                                <div>
+
+                                    <strong>Expanded Results :</strong>{" "}
+                                    {result.retrieved_expanded}
+
+                                </div>
+
+                                <div>
+
+                                    <strong>Compressed Results :</strong>{" "}
+                                    {result.retrieved_compressed}
+
+                                </div>
+
+                                <div>
+
+                                    <strong>BM25 Results :</strong>{" "}
+                                    {result.retrieved_bm25}
+
+                                </div>
+
+                                <div>
+
+                                    <strong>Hybrid Results :</strong>{" "}
+                                    {result.retrieved_hybrid}
+
+                                </div>
+
+                            </div>
+
                         </div>
 
                         {/* Sources */}
 
-                        <div className="mt-6">
+                        <div className="mt-8">
 
-                            <h3 className="font-bold text-lg mb-3">
+                            <h3 className="font-bold text-xl mb-4">
+
                                 Sources
+
                             </h3>
 
                             {
+
                                 Array.isArray(result.sources) &&
-                                result.sources.map((source, index) => (
 
-                                    <SourceCard
-                                        key={index}
-                                        source={source}
-                                    />
+                                result.sources.map(
 
-                                ))
+                                    (source, index) => (
+
+                                        <SourceCard
+
+                                            key={index}
+
+                                            source={source}
+
+                                        />
+
+                                    )
+
+                                )
+
                             }
 
                         </div>
@@ -189,18 +269,23 @@ function QuerySection() {
                         {/* Retrieved Chunks */}
 
                         {
+
                             Array.isArray(result.context_chunks) && (
 
                                 <ChunkViewer
+
                                     chunks={result.context_chunks}
+
                                 />
 
                             )
+
                         }
 
                     </div>
 
                 )
+
             }
 
         </div>

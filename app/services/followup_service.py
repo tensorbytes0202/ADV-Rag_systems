@@ -3,7 +3,9 @@ import ollama
 
 def generate_followups(question, answer):
 
-    prompt = f"""
+    try:
+
+        prompt = f"""
 You are an expert teacher.
 
 User Question:
@@ -12,42 +14,47 @@ User Question:
 Answer:
 {answer}
 
-Generate exactly 5 intelligent follow-up questions.
+Generate exactly 5 follow-up questions.
 
 Rules:
 - Only questions
-- One per line
+- One question per line
 - No numbering
-- No explanations
-- Maximum 12 words each
+- No explanation
 """
 
-    response = ollama.chat(
+        response = ollama.chat(
 
-        model="llama3.2",
+            model="llama3:latest",
 
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
 
-    )
+        )
 
-    text = response["message"]["content"]
+        text = response["message"]["content"]
 
-    questions = []
+        questions = []
 
-    for line in text.split("\n"):
+        for line in text.split("\n"):
 
-        line = line.strip()
+            line = line.strip()
 
-        if not line:
-            continue
+            if not line:
+                continue
 
-        line = line.lstrip("1234567890.- ")
+            line = line.lstrip("1234567890.- ")
 
-        questions.append(line)
+            questions.append(line)
 
-    return questions[:5]
+        return questions[:5]
+
+    except Exception as e:
+
+        print("FOLLOWUP ERROR:", e)
+
+        return []

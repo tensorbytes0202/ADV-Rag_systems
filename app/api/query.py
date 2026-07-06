@@ -42,6 +42,9 @@ from app.services.context_expansion import (
 from app.services.context_compression import (
     compress_context
 )
+from app.services.followup_service import (
+    generate_followups
+)
 
 #from app.services.verification_service import (
  #   verify_answer
@@ -86,8 +89,8 @@ def query_document(
     request.question
 )
     metadata = extract_metadata(
-    rewritten_question
-        )
+    request.question
+)
     print("=" * 50)
     print("FINAL DOCUMENT FILTER")
     print(metadata["document_name"])
@@ -124,10 +127,10 @@ def query_document(
     # Multi Query Generation
     # ===================================
 
-    queries = generate_queries(rewritten_question)
+    queries = rewritten_question
 
     if not queries:
-        queries = [rewritten_question]
+        queries = [request.question]
 
     queries = list(dict.fromkeys(queries))
     # ===================================
@@ -135,7 +138,7 @@ def query_document(
     # ===================================
 
     query_type = classify_query(
-        rewritten_question
+    request.question
 )
 
     config = get_retrieval_config(
@@ -239,13 +242,9 @@ def query_document(
     window_size=config["window_size"]
 )
     compressed_chunks = compress_context(
-
-    rewritten_question,
-
+    request.question,
     expanded_chunks,
-
     top_k=config["compression_top_k"]
-
 )
 
     print("=" * 60)
@@ -332,9 +331,9 @@ def query_document(
     # ===================================
 
     ranked_chunks = rerank_chunks(
-        rewritten_question,
-        hybrid_chunks
-    )
+    request.question,
+    hybrid_chunks
+)
 
     print("\nTOP CHUNKS\n")
 
@@ -471,20 +470,24 @@ def query_document(
     # ===================================
 
     answer = generate_answer(
-        rewritten_question,
-        context,
-        query_type
-    )
+    request.question,
+    context,
+    query_type
+)
+    followups = generate_followups(
+    request.question,
+    answer
+)
 
     # ===================================
     # Verification Layer
     # ===================================
 
     verification = verify_answer(
-        rewritten_question,
-         answer,
-         context
-     )
+    request.question,
+    answer,
+    context
+)
     print("=" * 60)
     print("VERIFICATION RESULT")
     print(verification)
@@ -560,6 +563,7 @@ def query_document(
         "rewritten_question": rewritten_question,
 
         "answer": answer,
+        "followup_questions": followups,
 
         "verification": verification,
 

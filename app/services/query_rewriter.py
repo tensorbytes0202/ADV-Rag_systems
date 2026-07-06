@@ -30,7 +30,7 @@ def rewrite_query(question):
 
     response = ollama.chat(
 
-        model="llama3.2",
+        model="llama3:latest",
 
         messages=[
 
