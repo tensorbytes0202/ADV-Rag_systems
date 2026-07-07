@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.upload import router as upload_router
 from app.api.query import router as query_router
 from app.api.pdf_preview import router as pdf_router
-
+from app.api import query_stream
 app = FastAPI(
     title="Advanced RAG System",
     version="1.0.0"
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(upload_router)
 app.include_router(query_router)
 app.include_router(pdf_router)
+app.include_router(query_stream.router)
 
 
 @app.get("/")

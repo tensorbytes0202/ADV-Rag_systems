@@ -40,33 +40,69 @@ function ChatWindow() {
         setLoading(true);
 
         try {
+            const response = await fetch(
 
-            const response = await api.post(
-
-                "/query",
+                "http://127.0.0.1:8000/query/stream",
 
                 {
 
-                    question
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type": "application/json"
+
+                    },
+
+                    body: JSON.stringify({
+
+                        question
+
+                    })
 
                 }
 
             );
 
-            console.log("========== RESPONSE ==========");
-            console.log(response.data);
+            const reader = response.body.getReader();
 
-            // ==========================
-            // Add Assistant Message
-            // ==========================
+            const decoder = new TextDecoder();
+
+            let answer = "";
+
+            while (true) {
+
+                const { done, value } = await reader.read();
+
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+
+                const lines = chunk.split("\n");
+
+                for (const line of lines) {
+
+                    if (!line.trim()) continue;
+
+                    const data = JSON.parse(line);
+
+                    answer += data.token;
+
+                }
+
+            }
 
             addAssistantMessage({
 
-                ...response.data,
+                answer,
 
-                role: "assistant",
+                confidence: 100,
 
-                timestamp: new Date().toISOString()
+                sources: [],
+
+                context_chunks: [],
+
+                followup_questions: []
 
             });
 
