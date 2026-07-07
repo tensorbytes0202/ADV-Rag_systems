@@ -2,11 +2,16 @@ function AnalyticsDashboard({ result }) {
 
     if (!result) return null;
 
+    const confidence =
+        result.confidence <= 1
+            ? Math.round(result.confidence * 100)
+            : Math.round(result.confidence);
+
     const cards = [
 
         {
             title: "Confidence",
-            value: `${Math.round(result.confidence * 100)}%`
+            value: `${confidence}%`
         },
 
         {
@@ -55,11 +60,8 @@ function AnalyticsDashboard({ result }) {
                 cards.map((card, index) => (
 
                     <div
-
                         key={index}
-
                         className="bg-white rounded-xl shadow-md p-5 text-center"
-
                     >
 
                         <div className="text-gray-500 text-sm">

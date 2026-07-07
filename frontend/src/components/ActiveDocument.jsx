@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 
-function ActiveDocument() {
+function ActiveDocument({
+
+    activeDocument,
+
+    setActiveDocument
+
+}) {
 
     const [documents, setDocuments] = useState([]);
-    const [activeDocument, setActiveDocument] = useState("");
 
     useEffect(() => {
 
@@ -21,11 +26,19 @@ function ActiveDocument() {
             setDocuments(docs.data.documents);
 
             const active = await api.get(
+
                 "/documents/active"
+
             );
 
+            const currentDocument =
+
+                active.data.active_document;
+
             setActiveDocument(
-                active.data.active_document
+
+                currentDocument
+
             );
 
         }
@@ -38,7 +51,11 @@ function ActiveDocument() {
 
     };
 
-    const changeDocument = async (documentName) => {
+    const changeDocument = async (
+
+        documentName
+
+    ) => {
 
         try {
 
@@ -48,7 +65,11 @@ function ActiveDocument() {
 
             );
 
-            setActiveDocument(documentName);
+            setActiveDocument(
+
+                documentName
+
+            );
 
         }
 
@@ -70,61 +91,87 @@ function ActiveDocument() {
 
             </h2>
 
-            <select
+            {
 
-                className="w-full border rounded-lg p-3"
+                documents.length === 0 ?
 
-                value={activeDocument}
+                    (
 
-                onChange={(e) =>
+                        <p className="text-gray-500">
 
-                    changeDocument(
+                            No documents uploaded.
 
-                        e.target.value
+                        </p>
 
                     )
 
-                }
+                    :
 
-            >
+                    (
 
-                {
+                        <select
 
-                    documents.map((doc) => (
+                            className="w-full border rounded-lg p-3"
 
-                        <option
+                            value={activeDocument}
 
-                            key={doc.name}
+                            onChange={(e) =>
 
-                            value={doc.name}
+                                changeDocument(
+
+                                    e.target.value
+
+                                )
+
+                            }
 
                         >
 
-                            {doc.name}
+                            {
 
-                            {"  "}
+                                documents.map(
 
-                            ({doc.pages} pages)
+                                    (doc) => (
 
-                        </option>
+                                        <option
 
-                    ))
+                                            key={doc.name}
 
-                }
+                                            value={doc.name}
 
-            </select>
+                                        >
+
+                                            {doc.name}
+
+                                            {" "}
+
+                                            ({doc.pages} pages)
+
+                                        </option>
+
+                                    )
+
+                                )
+
+                            }
+
+                        </select>
+
+                    )
+
+            }
 
             <div className="mt-4">
 
                 <strong>
 
-                    Current :
+                    Current:
 
                 </strong>
 
                 {" "}
 
-                {activeDocument}
+                {activeDocument || "None"}
 
             </div>
 
