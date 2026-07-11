@@ -1,5 +1,5 @@
 import json
-import ollama
+from app.services.llm_provider import chat
 
 
 SYSTEM_PROMPT = """
@@ -28,7 +28,7 @@ Example
 
 def rewrite_query(question):
 
-    response = ollama.chat(
+    response = chat(
 
         model="llama3:latest",
 

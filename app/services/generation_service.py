@@ -1,9 +1,13 @@
-import ollama
+from app.services.llm_provider import chat
 
-from app.services.chat_memory import (
-    get_history
+from app.prompts.generation_prompt import (
+    build_generation_prompt
 )
 
+
+# ============================================================
+# Normal Generation
+# ============================================================
 
 def generate_answer(
     question: str,
@@ -11,114 +15,67 @@ def generate_answer(
     query_type: str
 ):
 
-    history = get_history()
+    prompt = build_generation_prompt(
+        question,
+        context,
+        query_type
+    )
 
-    history_text = ""
+    response = chat(
 
-    for msg in history[-6:]:
-
-        history_text += (
-            f"{msg['role']}: "
-            f"{msg['content']}\n"
-        )
-
-    # ===================================
-    # Dynamic Formatting Instructions
-    # ===================================
-
-    format_instruction = ""
-
-    if query_type == "COMPARISON":
-
-        format_instruction = """
-Answer in a comparison table.
-
-Columns:
-Feature | Item 1 | Item 2
-"""
-
-    elif query_type == "ADVANTAGES":
-
-        format_instruction = """
-Answer using bullet points.
-"""
-
-    elif query_type == "DISADVANTAGES":
-
-        format_instruction = """
-Answer using bullet points.
-"""
-
-    elif query_type == "STEPS":
-
-        format_instruction = """
-Answer step-by-step using numbered points.
-"""
-
-    elif query_type == "LIST":
-
-        format_instruction = """
-Answer using bullet points.
-"""
-
-    elif query_type == "EXPLANATION":
-
-        format_instruction = """
-Give a detailed explanation using headings and bullet points.
-"""
-
-    else:
-
-        format_instruction = """
-Give a concise answer.
-"""
-
-    # ===================================
-    # Prompt
-    # ===================================
-
-    prompt = f"""
-You are an Advanced RAG Assistant.
-
-Rules:
-1. Answer ONLY from the provided context.
-2. Do NOT use outside knowledge.
-3. If answer is not found in context, reply exactly:
-   Insufficient information found.
-4. Follow the formatting instructions strictly.
-5. Do not hallucinate.
-6. Do not invent facts.
-7. Use only the retrieved context.
-
-FORMAT INSTRUCTION:
-{format_instruction}
-
-CONVERSATION HISTORY:
-{history_text}
-
-CONTEXT:
-{context}
-
-QUESTION:
-{question}
-"""
-
-    response = ollama.chat(
-        model="llama3",
         messages=[
             {
                 "role": "user",
                 "content": prompt
             }
         ]
+
     )
 
     answer = response["message"]["content"]
 
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print("GENERATED ANSWER")
-    print("=" * 50)
+    print("=" * 60)
     print(answer)
-    print("=" * 50 + "\n")
+    print("=" * 60 + "\n")
 
     return answer
+
+
+# ============================================================
+# Streaming Generation
+# ============================================================
+
+def stream_answer(
+    question: str,
+    context: str,
+    query_type: str
+):
+
+    prompt = build_generation_prompt(
+        question,
+        context,
+        query_type
+    )
+
+    stream = chat(
+
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+
+        stream=True
+
+    )
+
+    for chunk in stream:
+
+        if "message" in chunk:
+
+            token = chunk["message"]["content"]
+
+            yield token

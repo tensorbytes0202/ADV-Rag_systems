@@ -1,5 +1,4 @@
 from app.services.document_registry import is_document_indexed
-from huggingface_hub.inference._generated.types import document_question_answering
 from fastapi import APIRouter, UploadFile, File
 
 from app.services.pdf_service import save_pdf
@@ -15,7 +14,7 @@ from app.services.vector_store import (
     create_collection,
     store_embeddings
 )
-
+from app.services.bm_25_service import build_bm25_index
 
 from app.services.document_registry import (
 
@@ -31,7 +30,7 @@ from app.services.document_registry import (
     set_active_document,
     get_active_document
 )
-
+from app.services.bm_25_service import build_bm25_index
 router = APIRouter()
 
 
@@ -141,6 +140,14 @@ async def upload_pdf(
         "Total Embeddings:",
         len(embeddings)
     )
+    # =====================================
+    # Build BM25 Index
+    # =====================================
+
+    build_bm25_index(
+        file.filename,
+        chunks
+)
 
     create_collection()
 
@@ -149,6 +156,12 @@ async def upload_pdf(
         embeddings,
         file.filename
     )
+    
+
+    build_bm25_index(
+    file.filename,
+    chunks
+)
     register_document(
 
     file.filename,

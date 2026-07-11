@@ -1,7 +1,8 @@
 import os
 from app.core.logger import logger
+from app.core.settings import settings
 
-UPLOAD_DIR = "data/raw"
+UPLOAD_DIR=settings.RAW_DATA_PATH
 
 os.makedirs(UPLOAD_DIR,exist_ok=True)
 

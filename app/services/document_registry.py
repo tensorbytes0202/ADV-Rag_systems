@@ -1,9 +1,10 @@
 import json
 import os
-
-REGISTRY_FILE = "document_registry.json"
-
+from app.core.settings import settings
 from app.services.vector_store import client, COLLECTION_NAME
+REGISTRY_FILE=settings.REGISTRY_FILE
+
+
 
 
 def is_collection_available():
@@ -92,7 +93,7 @@ def get_documents():
 
     return documents
 
-ACTIVE_FILE = "active_document.json"
+ACTIVE_FILE= settings.ACTIVE_DOCUMENT_FILE
 
 
 def set_active_document(document_name):

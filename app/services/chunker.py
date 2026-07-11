@@ -1,5 +1,5 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
+from app.core.settings import settings
 
 def create_parent_child_chunks(text):
     """
@@ -29,8 +29,8 @@ def create_parent_child_chunks(text):
     # Parent Splitter
     # -----------------------------
     parent_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=3000,
-        chunk_overlap=300,
+        chunk_size=settings.PARENT_CHUNK_SIZE,
+        chunk_overlap=settings.PARENT_OVERLAP,
         separators=[
             "\n\n",
             "\n",
@@ -44,8 +44,8 @@ def create_parent_child_chunks(text):
     # Child Splitter
     # -----------------------------
     child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800,
-        chunk_overlap=150,
+        chunk_size = settings.CHILD_CHUNK_SIZE,
+        chunk_overlap =settings.CHILD_OVERLAP,
         separators=[
             "\n\n",
             "\n",

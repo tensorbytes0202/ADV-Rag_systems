@@ -1,6 +1,9 @@
 function ConfidenceBar({ confidence }) {
 
-    const percentage = Math.round(confidence);
+    const percentage =
+        confidence <= 1
+            ? Math.round(confidence * 100)
+            : Math.round(confidence);
 
     return (
 

@@ -8,6 +8,7 @@ import Sidebar from "./components/Sidebar";
 import PDFViewer from "./components/PDFViewer";
 
 import { ChatProvider } from "./context/ChatContext";
+import { PDFProvider } from "./context/PDFContext";
 
 function App() {
 
@@ -21,57 +22,61 @@ function App() {
 
     <ChatProvider>
 
-      <div className="flex h-screen bg-gray-100">
+      <PDFProvider>
 
-        {/* Sidebar */}
+        <div className="flex h-screen bg-gray-100">
 
-        <Sidebar />
+          {/* Sidebar */}
 
-        {/* Main Area */}
+          <Sidebar />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Main Area */}
 
-          <Navbar />
+          <div className="flex-1 flex flex-col overflow-hidden">
 
-          <div className="flex-1 overflow-y-auto">
+            <Navbar />
 
-            <div className="max-w-7xl mx-auto p-6">
+            <div className="flex-1 overflow-y-auto">
 
-              {/* Upload */}
+              <div className="max-w-7xl mx-auto p-6">
 
-              <UploadSection />
+                {/* Upload */}
 
-              {/* Active Document */}
+                <UploadSection />
 
-              <ActiveDocument
+                {/* Active Document */}
 
-                activeDocument={activeDocument}
+                <ActiveDocument
 
-                setActiveDocument={setActiveDocument}
+                  activeDocument={activeDocument}
 
-              />
+                  setActiveDocument={setActiveDocument}
 
-              {/* Chat + PDF */}
+                />
 
-              <div className="grid grid-cols-12 gap-6 mt-6">
+                {/* Chat + PDF */}
 
-                {/* Chat */}
+                <div className="grid grid-cols-12 gap-6 mt-6">
 
-                <div className="col-span-7">
+                  {/* Chat */}
 
-                  <ChatWindow />
+                  <div className="col-span-7">
 
-                </div>
+                    <ChatWindow />
 
-                {/* PDF */}
+                  </div>
 
-                <div className="col-span-5">
+                  {/* PDF */}
 
-                  <PDFViewer
+                  <div className="col-span-5">
 
-                    filename={activeDocument}
+                    <PDFViewer
 
-                  />
+                      filename={activeDocument}
+
+                    />
+
+                  </div>
 
                 </div>
 
@@ -83,7 +88,7 @@ function App() {
 
         </div>
 
-      </div>
+      </PDFProvider>
 
     </ChatProvider>
 

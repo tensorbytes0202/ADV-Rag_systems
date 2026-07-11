@@ -1,4 +1,4 @@
-import ollama
+from app.services.llm_provider import chat
 
 
 def generate_queries(question):
@@ -19,7 +19,7 @@ Question:
 {question}
 """
 
-    response = ollama.chat(
+    response = chat(
         model="llama3",
         messages=[
             {

@@ -1,33 +1,41 @@
 import uuid
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    VectorParams,
     Distance,
-    PointStruct,
-    Filter,
     FieldCondition,
-    MatchValue
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
 )
+
+from app.core.settings import settings
+
+
+# ==========================================================
+# Qdrant Client
+# ==========================================================
 
 client = QdrantClient(
-    host="127.0.0.1",
-    port=6333
+    host=settings.QDRANT_HOST,
+    port=settings.QDRANT_PORT
 )
 
-COLLECTION_NAME = "rag_documents"
+COLLECTION_NAME = settings.COLLECTION_NAME
 
 
-# =====================================================
-# CREATE COLLECTION
-# =====================================================
+# ==========================================================
+# Create Collection
+# ==========================================================
 
 def create_collection():
 
-    print("Connecting Qdrant...")
+    print("=" * 60)
+    print("Connecting to Qdrant...")
+    print("=" * 60)
 
     collections = client.get_collections()
-
-    print("Connected Successfully")
 
     existing = [
         collection.name
@@ -37,11 +45,17 @@ def create_collection():
     if COLLECTION_NAME not in existing:
 
         client.create_collection(
+
             collection_name=COLLECTION_NAME,
+
             vectors_config=VectorParams(
-                size=384,
+
+                size=settings.EMBEDDING_DIM,
+
                 distance=Distance.COSINE
+
             )
+
         )
 
         print(f"Collection '{COLLECTION_NAME}' created.")
@@ -51,22 +65,30 @@ def create_collection():
         print(f"Collection '{COLLECTION_NAME}' already exists.")
 
 
-# =====================================================
-# STORE EMBEDDINGS
-# =====================================================
+# ==========================================================
+# Store Embeddings
+# ==========================================================
 
 def store_embeddings(
+
     chunks,
+
     embeddings,
+
     document_name
+
 ):
 
-    if len(chunks) == 0:
-        print("No chunks found")
+    if not chunks:
+
+        print("No chunks found.")
+
         return
 
-    if len(embeddings) == 0:
-        print("No embeddings found")
+    if not embeddings:
+
+        print("No embeddings found.")
+
         return
 
     points = []
@@ -83,21 +105,21 @@ def store_embeddings(
 
                 payload={
 
-    "chunk_id": str(uuid.uuid4()),
+                    "chunk_id": str(uuid.uuid4()),
 
-    "parent_id": chunk["parent_id"],
+                    "parent_id": chunk["parent_id"],
 
-    "child_id": chunk["child_id"],
+                    "child_id": chunk["child_id"],
 
-    "parent_text": chunk["parent_text"],
+                    "parent_text": chunk["parent_text"],
 
-    "text": chunk["text"],
+                    "text": chunk["text"],
 
-    "document_name": chunk["document"],
+                    "document_name": chunk["document"],
 
-    "page": chunk["page"]
+                    "page": chunk["page"]
 
-}
+                }
 
             )
 
@@ -112,7 +134,6 @@ def store_embeddings(
     ) // batch_size
 
     print(f"Total Points : {len(points)}")
-
     print(f"Total Batches : {total_batches}")
 
     for i in range(
@@ -129,7 +150,7 @@ def store_embeddings(
 
         print(
 
-            f"Uploading Batch {(i//batch_size)+1}/{total_batches}"
+            f"Uploading Batch {(i // batch_size) + 1}/{total_batches}"
 
         )
 
@@ -143,16 +164,16 @@ def store_embeddings(
 
         print(
 
-            f"Uploaded Batch {(i//batch_size)+1}/{total_batches}"
+            f"Uploaded Batch {(i // batch_size) + 1}/{total_batches}"
 
         )
 
     print("Embedding Upload Complete")
 
 
-# =====================================================
-# SEARCH
-# =====================================================
+# ==========================================================
+# Dense Retrieval
+# ==========================================================
 
 def search_similar_chunks(
 
@@ -166,40 +187,33 @@ def search_similar_chunks(
 
 ):
 
-    query_filter = None
-
     conditions = []
 
-    # ==========================================
-    # Incoming Search Request
-    # ==========================================
-
-    print("=" * 60)
-    print("SEARCH REQUEST")
-    print("Document :", repr(document_name))
-    print("Page     :", page)
-    print("=" * 60)
-
-    # ==========================================
+    # --------------------------------------
     # Document Filter
-    # ==========================================
+    # --------------------------------------
 
     if document_name:
 
-        document_name = document_name.strip()
-
         conditions.append(
-            FieldCondition(
-                key="document_name",
-                match=MatchValue(
-                    value=document_name
-            )
-        )
-    )
 
-    # ==========================================
+            FieldCondition(
+
+                key="document_name",
+
+                match=MatchValue(
+
+                    value=document_name.strip()
+
+                )
+
+            )
+
+        )
+
+    # --------------------------------------
     # Page Filter
-    # ==========================================
+    # --------------------------------------
 
     if page is not None:
 
@@ -219,11 +233,9 @@ def search_similar_chunks(
 
         )
 
-    # ==========================================
-    # Build Query Filter
-    # ==========================================
+    query_filter = None
 
-    if len(conditions) > 0:
+    if conditions:
 
         query_filter = Filter(
 
@@ -231,18 +243,22 @@ def search_similar_chunks(
 
         )
 
-    # ==========================================
-    # Debug Query Filter
-    # ==========================================
-
     print("=" * 60)
-    print("QUERY FILTER")
-    print(query_filter)
+    print("SEARCH REQUEST")
+    print("Document :", document_name)
+    print("Page     :", page)
+    print("Limit    :", limit)
     print("=" * 60)
 
-    # ==========================================
+    if query_filter:
+
+        print("QUERY FILTER")
+        print(query_filter)
+        print("=" * 60)
+
+    # --------------------------------------
     # Qdrant Search
-    # ==========================================
+    # --------------------------------------
 
     search_result = client.query_points(
 
@@ -250,31 +266,19 @@ def search_similar_chunks(
 
         query=query_embedding,
 
-        
+        query_filter=query_filter,
 
         limit=limit
 
-    )   
-    print("=" * 60)
-    print("FILTER VALUE :", repr(document_name))
-
-    if len(search_result.points):
-
-        print("PAYLOAD VALUE :", repr(search_result.points[0].payload["document_name"]))
-
-    print("=" * 60)
-
-    # ==========================================
-    # Debug Results
-    # ==========================================
+    )
 
     print("=" * 60)
     print("RESULTS FOUND :", len(search_result.points))
     print("=" * 60)
 
-    if len(search_result.points) > 0:
+    if search_result.points:
 
-        print("FIRST PAYLOAD")
+        print("FIRST RESULT")
 
         print(search_result.points[0].payload)
 
@@ -282,12 +286,21 @@ def search_similar_chunks(
 
     return search_result.points
 
+
+# ==========================================================
+# Debug Utility
+# ==========================================================
+
 def debug_search():
 
     result = client.query_points(
+
         collection_name=COLLECTION_NAME,
-        query=[0.0] * 384,
+
+        query=[0.0] * settings.EMBEDDING_DIM,
+
         limit=1
+
     )
 
     print(result.points)

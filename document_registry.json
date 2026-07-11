@@ -22,5 +22,9 @@
     "Hadoop_basics.pdf": {
         "pages": 17,
         "chunks": 7
+    },
+    "Concurrency Control Protocol.pdf": {
+        "pages": 65,
+        "chunks": 103
     }
 }

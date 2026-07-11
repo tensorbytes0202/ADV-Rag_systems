@@ -1,44 +1,82 @@
+import { usePDF } from "../context/PDFContext";
+
 function SourceCard({ source }) {
 
-    const openPDF = () => {
+    const { openPDF } = usePDF();
 
-        const url =
-            `http://127.0.0.1:8000/pdf/${source.document}#page=${source.page}`;
+    const handleClick = () => {
 
-        window.open(url, "_blank");
+        openPDF(
+
+            source.document,
+
+            source.page,
+
+            source.text,
+
+            source.parent_text
+
+        );
 
     };
 
     return (
 
         <div
-            className="border rounded-lg p-4 mb-3 shadow cursor-pointer hover:bg-gray-50"
-            onClick={openPDF}
+
+            onClick={handleClick}
+
+            className="border rounded-xl p-4 mb-3 shadow cursor-pointer hover:bg-blue-50 transition"
+
         >
 
-            <h3 className="font-bold">
+            <h3 className="font-bold text-lg">
 
-                {source.document}
+                📄 {source.document}
 
             </h3>
 
-            <p>
+            <p className="mt-2">
 
-                Page : {source.page}
-
-            </p>
-
-            <p>
-
-                Chunk : {source.chunk_id}
+                <strong>Page:</strong> {source.page}
 
             </p>
 
-            <p>
+            {
 
-                Score : {source.score?.toFixed(3)}
+                source.chunk_id && (
 
-            </p>
+                    <p>
+
+                        <strong>Chunk:</strong> {source.chunk_id}
+
+                    </p>
+
+                )
+
+            }
+
+            {
+
+                source.score !== undefined && (
+
+                    <p>
+
+                        <strong>Score:</strong>{" "}
+
+                        {Number(source.score).toFixed(3)}
+
+                    </p>
+
+                )
+
+            }
+
+            <div className="mt-3 text-blue-600 font-semibold">
+
+                Click to open in PDF Viewer →
+
+            </div>
 
         </div>
 

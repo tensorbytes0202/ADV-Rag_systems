@@ -49,7 +49,7 @@ function PipelineTimeline({ result }) {
         {
             name: "Verification",
             status:
-                result.verification === "PASSED"
+                result.verification
                     ? "done"
                     : "failed"
         }
@@ -84,13 +84,9 @@ function PipelineTimeline({ result }) {
                         >
 
                             {
-
                                 step.status === "done"
-
                                     ? "✓"
-
                                     : "✕"
-
                             }
 
                         </div>
@@ -104,6 +100,42 @@ function PipelineTimeline({ result }) {
                     </div>
 
                 ))
+
+            }
+
+            {/* Verification Details */}
+
+            {
+
+                result.verification_reason && (
+
+                    <div className="mt-6 border-t pt-4">
+
+                        <h3 className="font-semibold mb-2">
+
+                            Verification Result
+
+                        </h3>
+
+                        <p className="text-gray-700">
+
+                            {result.verification_reason}
+
+                        </p>
+
+                        <p className="text-sm text-gray-500 mt-2">
+
+                            Confidence:{" "}
+
+                            {Math.round(
+                                (result.verification_confidence || 0) * 100
+                            )}%
+
+                        </p>
+
+                    </div>
+
+                )
 
             }
 

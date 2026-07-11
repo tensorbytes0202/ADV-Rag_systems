@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
-
+from app.core.settings import settings
 model = SentenceTransformer(
-    "BAAI/bge-small-en-v1.5"
+    settings.EMBEDDING_MODEL
 )
 
 def generate_embeddings(chunks):

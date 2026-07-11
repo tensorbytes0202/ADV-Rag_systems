@@ -23,7 +23,7 @@ app.add_middleware(
 app.include_router(upload_router)
 app.include_router(query_router)
 app.include_router(pdf_router)
-app.include_router(query_stream.router)
+# app.include_router(query_stream.router)
 
 
 @app.get("/")

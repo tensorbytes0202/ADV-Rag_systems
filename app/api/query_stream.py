@@ -1,39 +1,69 @@
-from fastapi import APIRouter
-from fastapi.responses import StreamingResponse
-import time
-import json
+# from fastapi import APIRouter
+# from fastapi.responses import StreamingResponse
 
-router = APIRouter()
+# from app.api.query import QueryRequest
+
+# from app.services.query_rewriter import rewrite_query
+# from app.services.query_classifier import classify_query
+
+# from app.services.retrieval_service import retrieve_context
+# from app.services.context_expansion import expand_context
+# from app.services.context_compression import compress_context
+
+# from app.services.generation_service import stream_answer
+
+# router = APIRouter()
 
 
-@router.post("/query/stream")
-def stream_answer():
+# @router.post("/query/stream")
+# async def query_stream(request: QueryRequest):
 
-    answer = """
-A process is a program in execution. It requires CPU time,
-memory, files and I/O resources to perform its task.
+#     rewritten_question = rewrite_query(
+#         request.question
+#     )
 
-Processes are the basic unit of execution in an operating system.
-"""
+#     query_type = classify_query(
+#         rewritten_question
+#     )
 
-    def generate():
+#     retrieved = retrieve_context(
+#         rewritten_question
+#     )
 
-        words = answer.split()
+#     expanded = expand_context(
+#         retrieved
+#     )
 
-        for word in words:
+#     compressed = compress_context(
+#         expanded
+#     )
 
-            yield json.dumps({
+#     context = "\n\n".join(
 
-                "token": word + " "
+#         chunk["text"]
 
-            }) + "\n"
+#         for chunk in compressed
 
-            time.sleep(0.04)
+#     )
 
-    return StreamingResponse(
+#     def generate():
 
-        generate(),
+#         for token in stream_answer(
 
-        media_type="application/x-ndjson"
+#             rewritten_question,
 
-    )
+#             context,
+
+#             query_type
+
+#         ):
+
+#             yield token
+
+#     return StreamingResponse(
+
+#         generate(),
+
+#         media_type="text/plain"
+
+#     )

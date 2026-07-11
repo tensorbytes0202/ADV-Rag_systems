@@ -1,0 +1,57 @@
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+
+    # ==========================
+    # LLM
+    # ==========================
+
+    LLM_MODEL: str = "llama3:latest"
+
+    # ==========================
+    # Embedding
+    # ==========================
+
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+
+    CROSS_ENCODER_MODEL: str = (
+        "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    )
+
+    EMBEDDING_DIM: int = 384
+
+    # ==========================
+    # Qdrant
+    # ==========================
+
+    QDRANT_HOST: str = "127.0.0.1"
+
+    QDRANT_PORT: int = 6333
+
+    COLLECTION_NAME: str = "rag_documents"
+
+    # ==========================
+    # Chunking
+    # ==========================
+
+    PARENT_CHUNK_SIZE: int = 3000
+
+    PARENT_OVERLAP: int = 300
+
+    CHILD_CHUNK_SIZE: int = 800
+
+    CHILD_OVERLAP: int = 150
+
+    # ==========================
+    # Paths
+    # ==========================
+
+    RAW_DATA_PATH: str = "data/raw"
+
+    REGISTRY_FILE: str = "document_registry.json"
+
+    ACTIVE_DOCUMENT_FILE: str = "active_document.json"
+
+
+settings = Settings()

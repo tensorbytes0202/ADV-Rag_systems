@@ -1,4 +1,5 @@
-import ollama
+
+from app.services.llm_provider import chat
 
 
 def generate_followups(question, answer):
@@ -23,7 +24,7 @@ Rules:
 - No explanation
 """
 
-        response = ollama.chat(
+        response = chat(
 
             model="llama3:latest",
 

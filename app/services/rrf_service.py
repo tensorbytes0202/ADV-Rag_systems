@@ -5,26 +5,26 @@ def rrf_fusion(
 ):
 
     scores = {}
+    objects = {}
 
-    # Dense Rank Score
-    for rank, chunk in enumerate(
-        dense_chunks
-    ):
+    # Dense
+    for rank, chunk in enumerate(dense_chunks):
 
-        scores[chunk] = (
-            scores.get(chunk, 0)
-            + 1 / (k + rank + 1)
-        )
+        key = chunk["text"]
 
-    # BM25 Rank Score
-    for rank, chunk in enumerate(
-        bm25_chunks
-    ):
+        scores[key] = scores.get(key, 0) + 1 / (k + rank + 1)
 
-        scores[chunk] = (
-            scores.get(chunk, 0)
-            + 1 / (k + rank + 1)
-        )
+        objects[key] = chunk
+
+    # BM25
+    for rank, chunk in enumerate(bm25_chunks):
+
+        key = chunk["text"]
+
+        scores[key] = scores.get(key, 0) + 1 / (k + rank + 1)
+
+        if key not in objects:
+            objects[key] = chunk
 
     ranked = sorted(
         scores.items(),
@@ -33,6 +33,6 @@ def rrf_fusion(
     )
 
     return [
-        chunk
-        for chunk, score in ranked
+        objects[text]
+        for text, _ in ranked
     ]

@@ -1,7 +1,5 @@
 import { useState } from "react";
 
-import api from "../../services/api";
-
 import { useChat } from "../../context/ChatContext";
 
 import ChatHistory from "./ChatHistory";
@@ -31,18 +29,15 @@ function ChatWindow() {
 
         if (!question.trim()) return;
 
-        // ==========================
-        // Add User Message
-        // ==========================
-
         addUserMessage(question);
 
         setLoading(true);
 
         try {
+
             const response = await fetch(
 
-                "http://127.0.0.1:8000/query/stream",
+                "http://127.0.0.1:8000/query",
 
                 {
 
@@ -64,45 +59,62 @@ function ChatWindow() {
 
             );
 
-            const reader = response.body.getReader();
+            if (!response.ok) {
 
-            const decoder = new TextDecoder();
-
-            let answer = "";
-
-            while (true) {
-
-                const { done, value } = await reader.read();
-
-                if (done) break;
-
-                const chunk = decoder.decode(value);
-
-                const lines = chunk.split("\n");
-
-                for (const line of lines) {
-
-                    if (!line.trim()) continue;
-
-                    const data = JSON.parse(line);
-
-                    answer += data.token;
-
-                }
+                throw new Error("Backend Error");
 
             }
 
+            const data = await response.json();
+
+            console.log("BACKEND RESPONSE");
+            console.log(data);
+
             addAssistantMessage({
 
-                answer,
+                answer: data.answer,
 
-                confidence: 100,
+                confidence: data.confidence,
 
-                sources: [],
+                sources: data.sources || [],
 
-                context_chunks: [],
+                context_chunks: data.context_chunks || [],
 
-                followup_questions: []
+                followup_questions:
+
+                    data.followups ||
+
+                    data.followup_questions ||
+
+                    [],
+
+                retrieved_parent:
+
+                    data.retrieved_parent,
+
+                retrieved_expanded:
+
+                    data.retrieved_expanded,
+
+                retrieved_compressed:
+
+                    data.retrieved_compressed,
+
+                retrieved_bm25:
+
+                    data.retrieved_bm25,
+
+                retrieved_hybrid:
+
+                    data.retrieved_hybrid,
+
+                verification:
+
+                    data.verification,
+
+                pipeline:
+
+                    data.pipeline || {}
 
             });
 
@@ -114,11 +126,8 @@ function ChatWindow() {
 
             addAssistantMessage({
 
-                role: "assistant",
-
-                timestamp: new Date().toISOString(),
-
                 answer:
+
                     "❌ Something went wrong while generating the answer.",
 
                 confidence: 0,
@@ -155,8 +164,6 @@ function ChatWindow() {
 
         <div className="bg-gray-100 rounded-xl shadow-lg p-6">
 
-            {/* Chat Header */}
-
             <div className="flex justify-between items-center mb-6">
 
                 <div>
@@ -183,21 +190,9 @@ function ChatWindow() {
 
             </div>
 
-            {/* Conversation */}
-
             <ChatHistory />
 
-            {/* Typing */}
-
-            {
-
-                loading &&
-
-                <TypingIndicator />
-
-            }
-
-            {/* Input */}
+            {loading && <TypingIndicator />}
 
             <div className="mt-6">
 
