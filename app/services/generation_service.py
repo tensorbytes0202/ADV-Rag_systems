@@ -1,8 +1,6 @@
 from app.services.llm_provider import chat
-
-from app.prompts.generation_prompt import (
-    build_generation_prompt
-)
+from app.prompts.generation_prompt import build_generation_prompt
+from app.core.settings import settings
 
 
 # ============================================================
@@ -22,14 +20,12 @@ def generate_answer(
     )
 
     response = chat(
-
         messages=[
             {
                 "role": "user",
                 "content": prompt
             }
         ]
-
     )
 
     answer = response["message"]["content"]
@@ -72,10 +68,35 @@ def stream_answer(
 
     )
 
+    # -------------------------------------------------------
+    # GROQ Streaming
+    # -------------------------------------------------------
+
+    if settings.LLM_PROVIDER.lower() == "groq":
+
+        for chunk in stream:
+
+            if not chunk.choices:
+                continue
+
+            delta = chunk.choices[0].delta
+
+            if delta and delta.content:
+
+                yield delta.content
+
+        return
+
+    # -------------------------------------------------------
+    # OLLAMA Streaming
+    # -------------------------------------------------------
+
     for chunk in stream:
 
         if "message" in chunk:
 
             token = chunk["message"]["content"]
 
-            yield token
+            if token:
+
+                yield token

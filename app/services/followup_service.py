@@ -1,4 +1,3 @@
-
 from app.services.llm_provider import chat
 
 
@@ -15,24 +14,25 @@ User Question:
 Answer:
 {answer}
 
-Generate exactly 5 follow-up questions.
+Generate exactly 3 follow-up questions.
 
 Rules:
-- Only questions
-- One question per line
+
+- Questions only
+- One per line
 - No numbering
 - No explanation
 """
 
         response = chat(
 
-            model="llama3:latest",
-
             messages=[
+
                 {
                     "role": "user",
                     "content": prompt
                 }
+
             ]
 
         )
@@ -52,7 +52,7 @@ Rules:
 
             questions.append(line)
 
-        return questions[:5]
+        return questions[:3]
 
     except Exception as e:
 

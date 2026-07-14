@@ -1,3 +1,4 @@
+
 import os
 
 from app.services.query_rewriter import rewrite_query
@@ -5,7 +6,7 @@ from app.services.metadata_parser import extract_metadata
 from app.services.document_registry import get_active_document
 from app.services.query_classifier import classify_query
 from app.services.query_router import get_retrieval_config
-
+from app.services.hyde_service import generate_hyde
 from app.services.embedding_service import (
     generate_query_embedding
 )
@@ -25,7 +26,10 @@ from app.services.context_expansion import (
 from app.services.context_compression import (
     compress_context
 )
-
+from app.services.self_query_service import generate_self_query
+from app.services.query_decomposition import (
+    decompose_query
+)
 
 # ==========================================================
 # Retrieval Pipeline
@@ -38,12 +42,24 @@ def run_retrieval_pipeline(question: str):
     # ==========================================
 
     rewritten_question = rewrite_query(question)
+    # ==========================================
+    # Query Decomposition
+    # ==========================================
+
+    subqueries = decompose_query(question)
 
     # Rewrite output ko list bana do
+    queries = []
+
+    queries.extend(subqueries)
+
     if isinstance(rewritten_question, str):
-        queries = [rewritten_question]
+
+        queries.append(rewritten_question)
+
     else:
-        queries = rewritten_question
+
+        queries.extend(rewritten_question)
 
     if not queries:
         queries = [question]
@@ -52,16 +68,43 @@ def run_retrieval_pipeline(question: str):
 
     # duplicate remove
     queries = list(dict.fromkeys(queries))
+    
 
     # ==========================================
     # Metadata
     # ==========================================
 
     metadata = extract_metadata(question)
+    # ==========================================
+    # Self Query Retrieval
+    # ==========================================
 
-    if metadata["document_name"] is None:
+    self_query = generate_self_query(question)
+
+    # LLM metadata has higher priority
+
+    if self_query["document_name"]:
+
+        metadata["document_name"] = self_query["document_name"]
+
+    elif metadata["document_name"] is None:
 
         metadata["document_name"] = get_active_document()
+
+
+    if self_query["page"]:
+
+        metadata["page"] = self_query["page"]
+
+
+    if self_query["chapter"]:
+
+        metadata["chapter"] = self_query["chapter"]
+
+
+    if self_query["section"]:
+
+        metadata["section"] = self_query["section"]
 
     if metadata["document_name"]:
 
@@ -77,21 +120,44 @@ def run_retrieval_pipeline(question: str):
 
     config = get_retrieval_config(query_type)
 
+    hyde_document = None
+
+    if config.get("use_hyde", False):
+
+        hyde_document = generate_hyde(question)
+        for subquery in subqueries:
+
+            hyde = generate_hyde(subquery)
+
+            queries.append(hyde)
+
+    if hyde_document:
+
+        queries.append(hyde_document)
+
+    queries = list(dict.fromkeys(queries))
+
     return {
 
-        "question": question,
+    "question": question,
 
-        "rewritten_question": rewritten_question,
+    "rewritten_question": rewritten_question,
 
-        "metadata": metadata,
+    "subqueries": subqueries,
 
-        "query_type": query_type,
+    "metadata": metadata,
 
-        "config": config,
+    "query_type": query_type,
 
-        "queries": queries
+    "config": config,
 
-    }
+    "queries": queries,
+
+    "hyde_document": hyde_document,
+
+    "self_query": self_query
+
+}
 
 
  
@@ -249,23 +315,20 @@ def build_context_chunks(
 
         context_chunks.append({
 
-            "text": chunk["text"],
+    "text": chunk.get("text"),
+    "page": chunk.get("page"),
+    "document": chunk.get("document"),
 
-            "page": chunk["page"],
+    "chunk_id": chunk.get("chunk_id"),
+    "parent_id": chunk.get("parent_id"),
 
-            "document": chunk["document"],
+    "vector_score": chunk.get("vector_score"),
+    "bm25_score": chunk.get("bm25_score"),
 
-            "chunk_id": chunk["chunk_id"],
+    "retrieval_type": chunk.get("retrieval_type"),
+    "rerank_score": chunk.get("rerank_score")
 
-            "parent_id": chunk["parent_id"],
-
-            "vector_score": chunk["vector_score"],
-
-            "retrieval_type": chunk["retrieval_type"],
-
-            "rerank_score": chunk["rerank_score"]
-
-        })
+})
 
     return context_chunks
 

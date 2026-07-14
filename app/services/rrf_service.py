@@ -7,24 +7,40 @@ def rrf_fusion(
     scores = {}
     objects = {}
 
-    # Dense
+    # =====================================================
+    # Dense Retrieval
+    # =====================================================
+
     for rank, chunk in enumerate(dense_chunks):
 
         key = chunk["text"]
 
         scores[key] = scores.get(key, 0) + 1 / (k + rank + 1)
 
-        objects[key] = chunk
+        objects[key] = dict(chunk)
 
-    # BM25
+    # =====================================================
+    # BM25 Retrieval
+    # =====================================================
+
     for rank, chunk in enumerate(bm25_chunks):
 
         key = chunk["text"]
 
         scores[key] = scores.get(key, 0) + 1 / (k + rank + 1)
 
-        if key not in objects:
-            objects[key] = chunk
+        if key in objects:
+
+            # Merge metadata
+            objects[key].update(chunk)
+
+        else:
+
+            objects[key] = dict(chunk)
+
+    # =====================================================
+    # Add RRF Score
+    # =====================================================
 
     ranked = sorted(
         scores.items(),
@@ -32,7 +48,14 @@ def rrf_fusion(
         reverse=True
     )
 
-    return [
-        objects[text]
-        for text, _ in ranked
-    ]
+    fused = []
+
+    for text, score in ranked:
+
+        chunk = objects[text]
+
+        chunk["rrf_score"] = score
+
+        fused.append(chunk)
+
+    return fused

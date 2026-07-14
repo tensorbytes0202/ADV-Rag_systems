@@ -1,26 +1,24 @@
 import json
+
 from app.services.llm_provider import chat
 
 
 SYSTEM_PROMPT = """
-Generate 5 different semantic versions of the user's query.
+Generate ONLY 2 semantic rewrites of the user's query.
 
 Rules:
 
-- Same meaning
+- Preserve meaning
 - Different wording
 - No explanation
-- Return JSON only
+- Return ONLY JSON
 
-Example
+Example:
 
 {
-    "queries":[
-        "What is process?",
-        "Define process.",
-        "Explain process.",
-        "Operating system process.",
-        "Program in execution."
+    "queries": [
+        "...",
+        "..."
     ]
 }
 """
@@ -29,8 +27,6 @@ Example
 def rewrite_query(question):
 
     response = chat(
-
-        model="llama3:latest",
 
         messages=[
 
@@ -46,24 +42,18 @@ def rewrite_query(question):
 
         ],
 
-        options={
-
-            "temperature": 0.2
-
-        }
+        temperature=0.2
 
     )
 
     try:
 
         data = json.loads(
-
             response["message"]["content"]
-
         )
 
-        return data["queries"]
+        return data["queries"][:2]
 
-    except:
+    except Exception:
 
         return [question]

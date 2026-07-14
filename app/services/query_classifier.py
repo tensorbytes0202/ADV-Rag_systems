@@ -32,7 +32,7 @@ def classify_query(question: str):
 
     response = chat(
 
-        model="llama3:latest",
+        
 
         messages=[
 

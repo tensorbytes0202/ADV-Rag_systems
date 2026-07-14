@@ -20,7 +20,6 @@ Question:
 """
 
     response = chat(
-        model="llama3",
         messages=[
             {
                 "role": "user",

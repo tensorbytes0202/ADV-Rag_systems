@@ -1,15 +1,22 @@
 import json
-import ollama
 
+from app.services.llm_provider import chat
+
+
+# ==========================================================
+# Verify Generated Answer
+# ==========================================================
 
 def verify_answer(
-    question,
-    answer,
-    context
+    question: str,
+    answer: str,
+    context: str
 ):
 
     prompt = f"""
 You are an expert RAG verification system.
+
+Your job is to verify whether the generated answer is supported by the retrieved context.
 
 Question:
 {question}
@@ -20,45 +27,45 @@ Retrieved Context:
 Generated Answer:
 {answer}
 
-Task:
+Instructions:
 
-Verify whether the generated answer is fully supported by the retrieved context.
+- Compare ONLY with the retrieved context.
+- Do NOT use outside knowledge.
+- If the answer is fully supported, return supported=true.
+- If partially supported, supported=false.
+- Return ONLY valid JSON.
 
-Return ONLY valid JSON in this format:
+Example:
 
 {{
     "supported": true,
     "confidence": 0.94,
-    "reason": "Answer is completely supported by retrieved context."
+    "reason": "The answer is fully supported by the retrieved context."
 }}
-
-Rules:
-
-- supported must be true or false
-- confidence must be between 0 and 1
-- reason must be one short sentence
-- Do not return anything except JSON.
 """
 
-    response = ollama.chat(
-        model="llama3",
+    response = chat(
+
         messages=[
             {
                 "role": "user",
                 "content": prompt
             }
-        ]
+        ],
+
+        temperature=0
+
     )
 
     content = response["message"]["content"].strip()
 
     try:
 
-        result = json.loads(content)
+        return json.loads(content)
 
     except Exception:
 
-        result = {
+        return {
 
             "supported": False,
 
@@ -67,5 +74,3 @@ Rules:
             "reason": "Verification parsing failed."
 
         }
-
-    return result
